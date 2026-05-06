@@ -49,6 +49,10 @@ const nextConfig: NextConfig = {
   // Rewrite /image/* requests to backend API
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!backendUrl) {
+      console.warn('NEXT_PUBLIC_API_URL is not set — skipping /image/* rewrite');
+      return [];
+    }
     return [
       {
         source: '/image/:path*',
