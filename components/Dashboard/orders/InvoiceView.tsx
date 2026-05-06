@@ -1,0 +1,1077 @@
+"use client";
+
+import { Fragment, useState, useRef } from "react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Printer, Download } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
+import { formatOrderItemQuantity } from "@/lib/uom-constants";
+
+interface OrderItem {
+  productName: string;
+  variantName?: string;
+  displayName?: string;
+  selectedCuttingStyle?: string;
+  quantity: number;
+  unitPrice?: number;
+  total?: number;
+  totalPrice?: number; // API returns this field
+  gstPercentage?: number;
+  gstAmount?: number;
+  totalGstAmount?: number; // Total GST for the item
+  igstAmount?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  variantUom?: string;
+  variantUomValue?: number;
+}
+
+interface OnlineOrder {
+  id: string;
+  orderNumber: string;
+  invoiceNumber?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  deliveryAddress?: {
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    landmark?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+  };
+  items: OrderItem[];
+  subtotal: number;
+  tax: number;
+  taxRate?: number;
+  
+  // GST Breakdown (based on admin and customer states)
+  gstType?: string; // "cgst_sgst" or "igst"
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  totalGstAmount?: number;
+  
+  // State Information for GST calculation
+  adminState?: string;
+  customerState?: string;
+  
+  discount: number;
+  couponCode?: string;
+  couponDiscount: number;
+  shippingCharge: number;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  orderStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface InvoiceViewProps {
+  order: OnlineOrder | null;
+  companySettings: {
+    companyName: string;
+    logoUrl: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone: string;
+    email: string;
+    gstNumber?: string;
+  } | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function InvoiceView({ order, companySettings, isOpen, onClose }: InvoiceViewProps) {
+  const currencySymbol = useCurrency();
+  const printRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  if (!order) return null;
+
+  const formatCurrency = (amount: number | undefined) => {
+    const value = amount ?? 0;
+    return `${currencySymbol}${value.toFixed(2)}`;
+  };
+
+  const formatThermalCurrency = (amount: number | undefined) => {
+    const value = amount ?? 0;
+    return value.toFixed(2);
+  };
+
+  const getGstPercentageText = (orderData: OnlineOrder) => {
+    const unique = Array.from(
+      new Set(
+        orderData.items
+          .map((item) => Number(item.gstPercentage || 0))
+          .filter((rate) => rate > 0)
+      )
+    ).sort((a, b) => a - b);
+
+    if (unique.length === 0) return "-";
+    return unique.map((rate) => `${rate}%`).join(", ");
+  };
+
+  const formatGstRateLabel = (rate: number) => {
+    const normalized = Number.isInteger(rate) ? `${rate}` : rate.toFixed(2).replace(/\.?0+$/, "");
+    return `${normalized}%`;
+  };
+
+  const getCgstSgstRateBreakdown = (orderData: OnlineOrder) => {
+    const map = new Map<string, { rate: number; cgst: number; sgst: number }>();
+
+    orderData.items.forEach((item) => {
+      const gstRate = Number(item.gstPercentage || 0);
+      if (gstRate <= 0) return;
+
+      const splitRate = Number((gstRate / 2).toFixed(2));
+      const key = splitRate.toString();
+      const totalGst = Number(item.totalGstAmount ?? item.gstAmount ?? 0);
+      const cgstValue = Number(item.cgstAmount ?? (totalGst > 0 ? totalGst / 2 : 0));
+      const sgstValue = Number(item.sgstAmount ?? (totalGst > 0 ? totalGst / 2 : 0));
+
+      const existing = map.get(key);
+      if (existing) {
+        existing.cgst += cgstValue;
+        existing.sgst += sgstValue;
+      } else {
+        map.set(key, { rate: splitRate, cgst: cgstValue, sgst: sgstValue });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.rate - b.rate);
+  };
+
+  const getThermalLogoUrl = () => {
+    if (!companySettings?.logoUrl) return "";
+    try {
+      const logoUrl = new URL(companySettings.logoUrl, window.location.origin);
+      logoUrl.searchParams.set("ts", Date.now().toString());
+      return logoUrl.toString();
+    } catch {
+      return `${companySettings.logoUrl}${companySettings.logoUrl.includes("?") ? "&" : "?"}ts=${Date.now()}`;
+    }
+  };
+
+  const handlePrint = async () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const thermalLogoUrl = getThermalLogoUrl();
+
+    // Create proper thermal print HTML structure
+    const deliveryAddressHtml = order.deliveryAddress ? `
+      <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+        <span>Delivery:</span>
+        <span>${order.deliveryAddress.name || order.customerName}</span>
+      </div>
+      <div style="font-size: 10px; color: #333; margin: 2px 0;">
+        <div>${order.deliveryAddress.addressLine1}</div>
+        ${order.deliveryAddress.addressLine2 ? `<div>${order.deliveryAddress.addressLine2}</div>` : ''}
+        <div>${order.deliveryAddress.city}, ${order.deliveryAddress.state} - ${order.deliveryAddress.pincode}</div>
+      </div>
+    ` : '';
+
+    const itemRowsHtml = order.items.map(item => {
+      const qtyOnly = Number.isInteger(item.quantity) ? `${item.quantity}` : `${item.quantity}`;
+      const gstText = item.gstPercentage ? `${item.gstPercentage}%` : '-';
+      
+      return `
+      <tr>
+        <td class="item-cell">${item.displayName || item.variantName || item.productName}</td>
+        <td class="col-qty">${qtyOnly}</td>
+        <td class="col-price">${formatThermalCurrency(item.unitPrice)}</td>
+        <td class="col-gst">${gstText}</td>
+        <td class="col-total">${formatThermalCurrency(item.totalPrice || item.total)}</td>
+      </tr>
+      ${item.selectedCuttingStyle ? `
+      <tr><td colspan="5" class="item-note">Cutting: ${item.selectedCuttingStyle}</td></tr>
+      ` : ''}
+    `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Invoice ${order.invoiceNumber || order.orderNumber}</title>
+          <style>
+            * {
+              font-family: 'Courier New', 'Lucida Console', monospace !important;
+              font-weight: 400 !important;
+              font-style: normal !important;
+              color: #000 !important;
+            }
+            @media print {
+              @page {
+                size: 80mm auto;
+                margin: 4mm 2mm 4mm 2mm;
+              }
+              html, body {
+                overflow-x: hidden;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+              }
+            }
+            body {
+              font-family: 'Courier New', 'Lucida Console', monospace;
+              font-size: 12px;
+              line-height: 1.45;
+              font-weight: 500;
+              letter-spacing: 0.15px;
+              text-rendering: geometricPrecision;
+              color: #000;
+              background: #fff;
+              width: 76mm;
+              margin: 0 auto;
+              padding: 2mm 0 0 0;
+            }
+            .invoice-header {
+              text-align: center;
+              border-bottom: 2px dashed #000;
+              padding-bottom: 10px;
+              margin-bottom: 10px;
+              break-inside: avoid;
+            }
+            .invoice-header h1 {
+              font-size: 18px;
+              font-weight: bold;
+              margin: 0 0 5px 0;
+            }
+            .invoice-header p {
+              margin: 2px 0;
+              font-size: 11px;
+            }
+            .invoice-info {
+              margin-bottom: 10px;
+              font-size: 11px;
+            }
+            .invoice-info div {
+              display: flex;
+              justify-content: space-between;
+              margin: 2px 0;
+            }
+            .items-table {
+              width: 100%;
+              border-top: 1px dashed #000;
+              border-bottom: 1px dashed #000;
+              padding: 5px 0 3px;
+              margin: 10px 0;
+            }
+            .items-table table {
+              width: 76mm;
+              table-layout: fixed;
+              border-collapse: separate;
+              border-spacing: 0;
+            }
+            .items-table th,
+            .items-table td {
+              font-size: 11px;
+              padding: 1px 0.35mm;
+              vertical-align: top;
+            }
+            .items-table th {
+              border-bottom: 1px dashed #000;
+              padding-bottom: 3px;
+              white-space: nowrap;
+            }
+            .item-cell {
+              width: 36%;
+              word-break: break-word;
+              overflow-wrap: anywhere;
+            }
+            .col-qty { width: 12%; text-align: center; white-space: nowrap; }
+            .col-price { width: 15%; text-align: right; white-space: nowrap; }
+            .col-gst { width: 9%; text-align: right; white-space: nowrap; }
+            .col-total { width: 18%; text-align: right; white-space: nowrap; }
+            .col-total { font-weight: 600 !important; }
+            .item-note {
+              font-size: 10px;
+              padding: 0 2px 2px;
+            }
+            .totals {
+              margin-top: 10px;
+              border-top: 1px dashed #000;
+              padding-top: 5px;
+            }
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 3px 0;
+              font-size: 11px;
+            }
+            .total-row.grand-total {
+              font-size: 14px;
+              font-weight: bold;
+              border-top: 2px solid #000;
+              padding-top: 5px;
+              margin-top: 5px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 15px;
+              padding-top: 10px;
+              border-top: 2px dashed #000;
+              font-size: 10px;
+            }
+            .footer p {
+              margin: 3px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Invoice Header -->
+          <div class="invoice-header">
+            ${companySettings?.logoUrl ? `
+              <div style="position: relative; width: 120px; height: 48px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center;">
+                <img 
+                  id="thermal-logo"
+                  src="${thermalLogoUrl}" 
+                  alt="Company Logo" 
+                  style="display:block; width: 100%; height: 100%; object-fit: contain; object-position: center;" 
+                  crossorigin="anonymous"
+                  referrerpolicy="no-referrer"
+                />
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Invoice Info -->
+          <div class="invoice-info">
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Invoice No:</span>
+              <span style="font-weight: bold;">${order.invoiceNumber || order.orderNumber}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Order No:</span>
+              <span>${order.orderNumber}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Date:</span>
+              <span>${formatDate(order.createdAt)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Time:</span>
+              <span>${new Date(order.createdAt).toLocaleTimeString()}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Customer:</span>
+              <span>${order.customerName}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Phone:</span>
+              <span>${order.customerPhone}</span>
+            </div>
+            ${deliveryAddressHtml}
+          </div>
+
+          <!-- Items Table -->
+          <div class="items-table">
+            <table>
+              <thead>
+                <tr>
+                  <th style="text-align:left;" class="item-cell">Item</th>
+                  <th class="col-qty">Qty</th>
+                  <th class="col-price">Price</th>
+                  <th class="col-gst">GST</th>
+                  <th class="col-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Totals -->
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>${formatThermalCurrency(order.subtotal)}</span>
+            </div>
+            ${(order.discount ?? 0) > 0 ? `
+              <div class="total-row" style="color: #16a34a;">
+                <span>Discount:</span>
+                <span>-${formatThermalCurrency(order.discount)}</span>
+              </div>
+            ` : ''}
+            ${(order.couponDiscount ?? 0) > 0 ? `
+              <div class="total-row" style="color: #16a34a;">
+                <span>Coupon Discount:</span>
+                <span>-${formatThermalCurrency(order.couponDiscount)}</span>
+              </div>
+            ` : ''}
+            <div class="total-row">
+              <span>Shipping:</span>
+              <span>${(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatThermalCurrency(order.shippingCharge)}</span>
+            </div>
+            <div class="total-row">
+              <span>GST%:</span>
+              <span>${getGstPercentageText(order)}</span>
+            </div>
+            
+            ${order.gstType === 'cgst_sgst' ? `
+              ${(() => {
+                const breakdown = getCgstSgstRateBreakdown(order);
+                if (breakdown.length > 0) {
+                  return breakdown.map((entry) => `
+                    <div class="total-row">
+                      <span>CGST ${formatGstRateLabel(entry.rate)}:</span>
+                      <span>${formatThermalCurrency(entry.cgst)}</span>
+                    </div>
+                    <div class="total-row">
+                      <span>SGST ${formatGstRateLabel(entry.rate)}:</span>
+                      <span>${formatThermalCurrency(entry.sgst)}</span>
+                    </div>
+                  `).join('');
+                }
+                return `
+                  ${(order.cgstAmount || 0) > 0 ? `
+                    <div class="total-row">
+                      <span>CGST:</span>
+                      <span>${formatThermalCurrency(order.cgstAmount)}</span>
+                    </div>
+                  ` : ''}
+                  ${(order.sgstAmount || 0) > 0 ? `
+                    <div class="total-row">
+                      <span>SGST:</span>
+                      <span>${formatThermalCurrency(order.sgstAmount)}</span>
+                    </div>
+                  ` : ''}
+                `;
+              })()}
+            ` : `
+              ${(order.igstAmount || 0) > 0 ? `
+                <div class="total-row">
+                  <span>IGST:</span>
+                  <span>${formatThermalCurrency(order.igstAmount)}</span>
+                </div>
+              ` : ''}
+            `}
+            
+            ${!order.gstType && (order.tax || 0) > 0 ? `
+              <div class="total-row">
+                <span>Tax (GST):</span>
+                <span>${formatThermalCurrency(order.tax)}</span>
+              </div>
+            ` : ''}
+            
+            <div class="total-row grand-total">
+              <span>FINAL TOTAL:</span>
+              <span>${formatThermalCurrency(order.total)}</span>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div style="margin-top: 10px; font-size: 11px;">
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Payment:</span>
+              <span style="font-weight: bold; text-transform: uppercase;">${order.paymentMethod}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Status:</span>
+              <span style="font-weight: bold; text-transform: uppercase; color: ${
+                order.paymentStatus === 'completed' ? '#16a34a' : 
+                order.paymentStatus === 'pending' ? '#ca8a04' : '#dc2626'
+              };">${order.paymentStatus}</span>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <p style="font-weight: bold; margin: 3px 0;">Thank You, Please Come Again!</p>
+            <p style="margin: 3px 0;">${companySettings?.companyName || 'LEATS'}</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+
+    const waitForLogo = async () => {
+      if (!thermalLogoUrl) return;
+      const logo = printWindow.document.getElementById("thermal-logo") as HTMLImageElement | null;
+      if (!logo || logo.complete) return;
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const done = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
+        logo.onload = done;
+        logo.onerror = done;
+        setTimeout(done, 1500);
+      });
+    };
+
+    await waitForLogo();
+    printWindow.focus();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 150);
+  };
+
+  const handleDownload = async () => {
+    if (!order) return;
+
+    setIsDownloading(true);
+    try {
+      // Create a temporary hidden div with the thermal print design
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '0';
+      tempDiv.style.left = '0';
+      tempDiv.style.zIndex = '-9999';
+      tempDiv.style.backgroundColor = '#ffffff';
+      tempDiv.style.width = '80mm'; // Thermal print width
+      tempDiv.style.fontFamily = "'Courier New', monospace";
+      tempDiv.style.fontSize = '12px';
+      tempDiv.style.lineHeight = '1.4';
+      tempDiv.style.color = '#000';
+      tempDiv.style.padding = '10px';
+      
+      // Create the thermal print HTML
+      tempDiv.innerHTML = generateThermalPrintHTML(order);
+      document.body.appendChild(tempDiv);
+
+      // Ensure logo is CORS-friendly for html2canvas
+      const logoImg = tempDiv.querySelector('img') as HTMLImageElement;
+      if (logoImg && companySettings?.logoUrl) {
+        logoImg.crossOrigin = "anonymous";
+        logoImg.referrerPolicy = "no-referrer";
+        logoImg.src = companySettings.logoUrl;
+        // Wait for logo to load
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate PDF using html2canvas and jsPDF
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: tempDiv.scrollWidth,
+        height: tempDiv.scrollHeight,
+      });
+
+      // Remove temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF with thermal print dimensions
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [80, Math.max(200, (canvas.height * 80) / canvas.width)], // Dynamic height based on content
+        compress: true
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Add image to PDF
+      if (imgHeight > pdfHeight) {
+        // If content is too tall, scale it down
+        const scale = pdfHeight / imgHeight;
+        const scaledWidth = imgWidth * scale;
+        const scaledHeight = pdfHeight;
+        const xOffset = (pdfWidth - scaledWidth) / 2;
+        pdf.addImage(imgData, 'JPEG', xOffset, 0, scaledWidth, scaledHeight);
+      } else {
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      }
+
+      // Download the PDF
+      pdf.save(`invoice-${order.orderNumber}.pdf`);
+      
+    } catch (error: unknown) {
+      console.error('Error downloading PDF:', error);
+      const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
+      alert(`Failed to download PDF: ${errorMessage}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const generateThermalPrintHTML = (order: OnlineOrder): string => {
+    const deliveryAddressHtml = order.deliveryAddress ? `
+      <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+        <span>Delivery:</span>
+        <span>${order.deliveryAddress.name || order.customerName}</span>
+      </div>
+      <div style="font-size: 10px; color: #333; margin: 2px 0;">
+        <div>${order.deliveryAddress.addressLine1}</div>
+        ${order.deliveryAddress.addressLine2 ? `<div>${order.deliveryAddress.addressLine2}</div>` : ''}
+        <div>${order.deliveryAddress.city}, ${order.deliveryAddress.state} - ${order.deliveryAddress.pincode}</div>
+      </div>
+    ` : '';
+
+    const itemRowsHtml = order.items.map(item => {
+      const qtyUOM = formatOrderItemQuantity(item.quantity, item.variantUom, item.variantUomValue);
+      
+      return `
+      <tr>
+        <td style="width:40%; word-break: break-word; overflow-wrap:anywhere; vertical-align: top; font-size: 11px; padding: 1px 0.4mm;">${item.displayName || item.variantName || item.productName}</td>
+        <td style="width:14%; text-align: center; white-space: nowrap; vertical-align: top; font-size: 11px; padding: 1px 0.4mm;">${qtyUOM}</td>
+        <td style="width:20%; text-align: right; white-space: nowrap; vertical-align: top; font-size: 11px; padding: 1px 0.4mm;">${formatThermalCurrency(item.unitPrice)}</td>
+        <td style="width:26%; text-align: right; white-space: nowrap; vertical-align: top; font-size: 11px; padding: 1px 0.4mm; font-weight: 600;">${formatThermalCurrency(item.totalPrice || item.total)}</td>
+      </tr>
+      ${item.selectedCuttingStyle ? `<tr><td colspan="4" style="font-size: 10px; padding: 0 2px 2px;">Cutting: ${item.selectedCuttingStyle}</td></tr>` : ''}
+    `;
+    }).join('');
+
+    return `
+      <!-- Invoice Header -->
+      <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
+        ${companySettings?.logoUrl ? `
+          <div style="position: relative; width: 160px; height: 80px; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <img 
+              src="${getThermalLogoUrl()}" 
+              alt="Company Logo" 
+              style="max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;" 
+              crossorigin="anonymous"
+              referrerpolicy="no-referrer"
+            />
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Invoice Info -->
+      <div style="margin-bottom: 10px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Invoice No:</span>
+          <span style="font-weight: bold;">${order.invoiceNumber || order.orderNumber}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Order No:</span>
+          <span>${order.orderNumber}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Date:</span>
+          <span>${formatDate(order.createdAt)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Time:</span>
+          <span>${new Date(order.createdAt).toLocaleTimeString()}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Customer:</span>
+          <span>${order.customerName}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Phone:</span>
+          <span>${order.customerPhone}</span>
+        </div>
+        ${deliveryAddressHtml}
+      </div>
+
+      <!-- Items Table -->
+      <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; margin: 10px 0;">
+        <table style="width:76mm; table-layout: fixed; border-collapse: separate; border-spacing:0;">
+          <thead>
+            <tr>
+              <th style="width:40%; text-align:left; font-size: 11px; border-bottom: 1px dashed #000; padding: 1px 0.4mm 3px;">Item</th>
+              <th style="width:14%; text-align:center; white-space: nowrap; font-size: 11px; border-bottom: 1px dashed #000; padding: 1px 0.4mm 3px;">Qty/UOM</th>
+              <th style="width:20%; text-align:right; white-space: nowrap; font-size: 11px; border-bottom: 1px dashed #000; padding: 1px 0.4mm 3px;">Price</th>
+              <th style="width:26%; text-align:right; white-space: nowrap; font-size: 11px; border-bottom: 1px dashed #000; padding: 1px 0.4mm 3px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>${itemRowsHtml}</tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;">
+        <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+          <span>Subtotal:</span>
+          <span>${formatThermalCurrency(order.subtotal)}</span>
+        </div>
+        ${(order.discount ?? 0) > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; color: #16a34a;">
+            <span>Discount:</span>
+            <span>-${formatThermalCurrency(order.discount)}</span>
+          </div>
+        ` : ''}
+        ${(order.couponDiscount ?? 0) > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; color: #16a34a;">
+            <span>Coupon Discount:</span>
+            <span>-${formatThermalCurrency(order.couponDiscount)}</span>
+          </div>
+        ` : ''}
+        <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+          <span>Shipping:</span>
+          <span>${(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatThermalCurrency(order.shippingCharge)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+          <span>GST%:</span>
+          <span>${getGstPercentageText(order)}</span>
+        </div>
+        
+        ${order.gstType === 'cgst_sgst' ? `
+          ${(() => {
+            const breakdown = getCgstSgstRateBreakdown(order);
+            if (breakdown.length > 0) {
+              return breakdown.map((entry) => `
+                <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+                  <span>CGST ${formatGstRateLabel(entry.rate)}:</span>
+                  <span>${formatThermalCurrency(entry.cgst)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+                  <span>SGST ${formatGstRateLabel(entry.rate)}:</span>
+                  <span>${formatThermalCurrency(entry.sgst)}</span>
+                </div>
+              `).join('');
+            }
+            return `
+              ${(order.cgstAmount || 0) > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+                  <span>CGST:</span>
+                  <span>${formatThermalCurrency(order.cgstAmount)}</span>
+                </div>
+              ` : ''}
+              ${(order.sgstAmount || 0) > 0 ? `
+                <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+                  <span>SGST:</span>
+                  <span>${formatThermalCurrency(order.sgstAmount)}</span>
+                </div>
+              ` : ''}
+            `;
+          })()}
+        ` : `
+          ${(order.igstAmount || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+              <span>IGST:</span>
+              <span>${formatThermalCurrency(order.igstAmount)}</span>
+            </div>
+          ` : ''}
+        `}
+        
+        ${!order.gstType && (order.tax || 0) > 0 ? `
+          <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px;">
+            <span>Tax (GST):</span>
+            <span>${formatThermalCurrency(order.tax)}</span>
+          </div>
+        ` : ''}
+        
+        <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 14px; font-weight: bold; border-top: 2px solid #000; padding-top: 5px; margin-top: 5px;">
+          <span>FINAL TOTAL:</span>
+          <span>${formatThermalCurrency(order.total)}</span>
+        </div>
+      </div>
+
+      <!-- Payment Method -->
+      <div style="margin-top: 10px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Payment:</span>
+          <span style="font-weight: bold; text-transform: uppercase;">${order.paymentMethod}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+          <span>Status:</span>
+          <span style="font-weight: bold; text-transform: uppercase; color: ${
+            order.paymentStatus === 'completed' ? '#16a34a' : 
+            order.paymentStatus === 'pending' ? '#ca8a04' : '#dc2626'
+          };">${order.paymentStatus}</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; margin-top: 15px; padding-top: 10px; border-top: 2px dashed #000; font-size: 10px;">
+        <p style="font-weight: bold; margin: 3px 0;">Thank You, Please Come Again!</p>
+        
+      </div>
+    `;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Invoice View
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Thermal Print Preview */}
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="bg-gray-100 px-4 py-2 border-b">
+            <p className="text-xs text-gray-600 text-center">Thermal Print Preview (80mm)</p>
+          </div>
+          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", lineHeight: "1.4" }}>
+            <div ref={printRef}>
+              {/* Invoice Header */}
+              <div className="text-center border-b-2 border-dashed border-gray-800 pb-3 mb-3">
+                {companySettings?.logoUrl && (
+                  <div className="relative w-40 h-20 flex items-center justify-center overflow-hidden mx-auto">
+                    <Image 
+                      src={companySettings.logoUrl} 
+                      alt="Company Logo" 
+                      fill
+                      sizes="160px"
+                      className="object-contain"
+                      priority={true}
+                      quality={90}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Invoice Info */}
+              <div className="mb-3 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span>Invoice No:</span>
+                  <span className="font-semibold">{order.invoiceNumber || order.orderNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Order No:</span>
+                  <span>{order.orderNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Date:</span>
+                  <span>{formatDate(order.createdAt)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Time:</span>
+                  <span>{new Date(order.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Customer:</span>
+                  <span>{order.customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Phone:</span>
+                  <span>{order.customerPhone}</span>
+                </div>
+                {order.deliveryAddress && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Delivery:</span>
+                      <span>{order.deliveryAddress.name || order.customerName}</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      <div>{order.deliveryAddress.addressLine1}</div>
+                      {order.deliveryAddress.addressLine2 && (
+                        <div>{order.deliveryAddress.addressLine2}</div>
+                      )}
+                      <div>{order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Items Table */}
+              <div className="border-t border-b border-dashed border-gray-800 py-2 my-3">
+                <table className="w-full table-fixed text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left font-semibold pb-1 w-[40%]">Item</th>
+                      <th className="text-center font-semibold pb-1 w-[14%]">Qty/UOM</th>
+                      <th className="text-right font-semibold pb-1 w-[20%]">Price</th>
+                      <th className="text-right font-semibold pb-1 w-[26%]">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item, index) => {
+                      return (
+                        <Fragment key={`item-${index}`}>
+                          <tr>
+                            <td className="align-top py-0.5 pr-1 break-words font-semibold">{item.displayName || item.variantName || item.productName}</td>
+                            <td className="align-top py-0.5 text-center whitespace-nowrap">{formatOrderItemQuantity(item.quantity, item.variantUom, item.variantUomValue)}</td>
+                            <td className="align-top py-0.5 text-right whitespace-nowrap">{formatCurrency(item.unitPrice)}</td>
+                            <td className="align-top py-0.5 text-right whitespace-nowrap font-semibold">{formatCurrency(item.totalPrice || item.total)}</td>
+                          </tr>
+                          {item.selectedCuttingStyle && (
+                            <tr>
+                              <td colSpan={5} className="text-[11px] text-gray-600 pb-1">Cutting: {item.selectedCuttingStyle}</td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="mt-3 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(order.subtotal)}</span>
+                </div>
+                {(order.discount ?? 0) > 0 && (
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>Discount:</span>
+                    <span>-{formatCurrency(order.discount)}</span>
+                  </div>
+                )}
+                {(order.couponDiscount ?? 0) > 0 && (
+                  <div className="flex justify-between text-xs text-green-600">
+                    <span>Coupon Discount:</span>
+                    <span>-{formatCurrency(order.couponDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs">
+                  <span>Shipping:</span>
+                  <span>{(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatCurrency(order.shippingCharge)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>GST%:</span>
+                  <span>{getGstPercentageText(order)}</span>
+                </div>
+                
+                {/* GST Breakdown */}
+                {order.gstType === 'cgst_sgst' ? (
+                  <>
+                    {(() => {
+                      const breakdown = getCgstSgstRateBreakdown(order);
+                      if (breakdown.length > 0) {
+                        return breakdown.map((entry) => (
+                          <Fragment key={`gst-split-${entry.rate}`}>
+                            <div className="flex justify-between text-xs">
+                              <span>CGST {formatGstRateLabel(entry.rate)}:</span>
+                              <span>{formatCurrency(entry.cgst)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span>SGST {formatGstRateLabel(entry.rate)}:</span>
+                              <span>{formatCurrency(entry.sgst)}</span>
+                            </div>
+                          </Fragment>
+                        ));
+                      }
+                      return (
+                        <>
+                          {(order.cgstAmount || 0) > 0 && (
+                            <div className="flex justify-between text-xs">
+                              <span>CGST:</span>
+                              <span>{formatCurrency(order.cgstAmount)}</span>
+                            </div>
+                          )}
+                          {(order.sgstAmount || 0) > 0 && (
+                            <div className="flex justify-between text-xs">
+                              <span>SGST:</span>
+                              <span>{formatCurrency(order.sgstAmount)}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    {(order.igstAmount || 0) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span>IGST:</span>
+                        <span>{formatCurrency(order.igstAmount)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Fallback for orders without GST breakdown */}
+                {!order.gstType && (order.tax || 0) > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span>Tax (GST):</span>
+                    <span>{formatCurrency(order.tax)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-sm font-bold border-t-2 border-gray-800 pt-2 mt-2">
+                  <span>FINAL TOTAL:</span>
+                  <span>{formatCurrency(order.total)}</span>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="mt-3 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span>Payment:</span>
+                  <span className="font-bold uppercase">{order.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span className={`font-bold uppercase ${
+                    order.paymentStatus === 'completed' ? 'text-green-600' : 
+                    order.paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                  }`}>
+                    {order.paymentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center mt-4 pt-3 border-t-2 border-dashed border-gray-800">
+                <p className="text-xs font-bold mb-1">Thank You, Please Come Again!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 mt-4">
+          <Button
+            onClick={handlePrint}
+            className="flex-1"
+            variant="default"
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Print Invoice
+          </Button>
+          <Button
+            onClick={handleDownload}
+            className="flex-1"
+            variant="outline"
+            disabled={isDownloading}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {isDownloading ? 'Downloading...' : 'Download PDF'}
+          </Button>
+        </div>
+
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          className="w-full mt-2"
+        >
+          Close
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}

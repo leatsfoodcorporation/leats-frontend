@@ -1,0 +1,494 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import DynamicProductCard from '@/components/Home/DynamicProductCard';
+import { getProducts, type Product } from '@/services/online-services/frontendProductService';
+import type { Category } from '@/services/online-services/frontendCategoryService';
+import { badgeService } from '@/services/online-services/badgeService';
+import {
+  IconChevronRight,
+  IconChevronLeft,
+  IconFilter,
+  IconX,
+  IconAdjustments,
+} from '@tabler/icons-react';
+import ProductFilters, { STATIC_BADGE_OPTIONS, type BadgeOption } from '@/components/products/ProductFilters';
+import SortDropdown from '@/components/products/SortDropdown';
+
+// Sort options
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First', sortBy: 'createdAt', sortOrder: 'desc' },
+  { value: 'price-low', label: 'Price: Low to High', sortBy: 'defaultSellingPrice', sortOrder: 'asc' },
+  { value: 'price-high', label: 'Price: High to Low', sortBy: 'defaultSellingPrice', sortOrder: 'desc' },
+  { value: 'discount', label: 'Discount', sortBy: 'defaultDiscountValue', sortOrder: 'desc' },
+];
+
+interface ProductsPageClientProps {
+  initialProducts: Product[];
+  initialPagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  } | null;
+  categories: Category[];
+  availableBrands: string[];
+  initialType?: string;
+}
+
+export default function ProductsPageClient({
+  initialProducts,
+  initialPagination,
+  categories,
+  availableBrands,
+  initialType,
+}: ProductsPageClientProps) {
+  // Pagination & Sort
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSort, setSelectedSort] = useState('newest');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<{ id: string; name: string } | null>(null);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedPriceRange, setSelectedPriceRange] = useState<{ min?: number; max?: number } | null>(null);
+  const [customMinPrice, setCustomMinPrice] = useState('');
+  const [customMaxPrice, setCustomMaxPrice] = useState('');
+  const [selectedBadge, setSelectedBadge] = useState('all');
+  const [selectedType, setSelectedType] = useState(initialType);
+
+  // UI State
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+
+  // Data - Initialize with server data
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>(STATIC_BADGE_OPTIONS);
+  const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(initialPagination?.totalPages || 1);
+  const [totalCount, setTotalCount] = useState(initialPagination?.totalCount || 0);
+
+  const itemsPerPage = 15;
+
+  // Count active filters
+  const activeFilterCount =
+    (selectedCategory ? 1 : 0) +
+    (selectedSubcategory ? 1 : 0) +
+    selectedBrands.length +
+    (selectedPriceRange ? 1 : 0) +
+    (selectedBadge !== 'all' ? 1 : 0);
+
+  // Fetch badges on mount (static + custom)
+  useEffect(() => {
+    const fetchBadges = async () => {
+      try {
+        const response = await badgeService.getAllBadges();
+        if (response.success && response.data.all) {
+          // Build badge options: "All Products" + "Combo Products" + all badges from API (sorted by sortOrder)
+          const allBadgeOptions: BadgeOption[] = [
+            { value: 'all', label: 'All Products', sortOrder: -2 },
+            { value: 'combo', label: 'Combo Products', sortOrder: -1 },
+            ...response.data.all.map(badge => ({
+              value: badge.name,
+              label: badge.name,
+              sortOrder: badge.sortOrder,
+            })),
+          ];
+          setBadgeOptions(allBadgeOptions);
+        }
+      } catch (err) {
+        console.error('Error fetching badges:', err);
+        // Fall back to static options on error
+        setBadgeOptions(STATIC_BADGE_OPTIONS);
+      }
+    };
+    fetchBadges();
+  }, []);
+
+  // Fetch products when filters change
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Determine price filter
+      let minPrice: number | undefined;
+      let maxPrice: number | undefined;
+
+      if (selectedPriceRange) {
+        minPrice = selectedPriceRange.min;
+        maxPrice = selectedPriceRange.max;
+      }
+
+      const response = await getProducts({
+        page: currentPage,
+        limit: itemsPerPage,
+        category: selectedCategory?.name,
+        subCategory: selectedSubcategory?.name,
+        brand: selectedBrands.length === 1 ? selectedBrands[0] : undefined,
+        minPrice,
+        maxPrice,
+        sortBy,
+        sortOrder,
+        badge: selectedBadge !== 'all' && selectedBadge !== 'combo' ? selectedBadge : undefined,
+        type: selectedBadge === 'combo' ? 'combo' : selectedType,
+        includeVariantPriceFilter: 'true',
+      });
+
+      // If multiple brands selected, filter client-side
+      let filteredProducts = response.data;
+      if (selectedBrands.length > 1) {
+        filteredProducts = response.data.filter((p) => selectedBrands.includes(p.brand));
+      }
+
+      setProducts(filteredProducts);
+      setTotalPages(response.pagination.totalPages);
+      setTotalCount(selectedBrands.length > 1 ? filteredProducts.length : response.pagination.totalCount);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    currentPage,
+    sortBy,
+    sortOrder,
+    selectedCategory,
+    selectedSubcategory,
+    selectedBrands,
+    selectedPriceRange,
+    selectedBadge,
+    selectedType,
+  ]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Handle sort change
+  const handleSortChange = (value: string) => {
+    const option = SORT_OPTIONS.find((o) => o.value === value);
+    if (option) {
+      setSelectedSort(value);
+      setSortBy(option.sortBy);
+      setSortOrder(option.sortOrder);
+      setCurrentPage(1);
+    }
+  };
+
+  // Handle category select
+  const handleCategorySelect = (category: Category | null) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory(null);
+    setCurrentPage(1);
+  };
+
+  // Handle subcategory select
+  const handleSubcategorySelect = (subcategory: { id: string; name: string } | null) => {
+    setSelectedSubcategory(subcategory);
+    setCurrentPage(1);
+  };
+
+  // Handle brand toggle
+  const handleBrandToggle = (brand: string) => {
+    setSelectedBrands((prev) => (prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]));
+    setCurrentPage(1);
+  };
+
+  // Handle price range selection
+  const handlePriceRangeSelect = (range: { min?: number; max?: number } | null) => {
+    setSelectedPriceRange(range);
+    if (range !== null) {
+      setCustomMinPrice('');
+      setCustomMaxPrice('');
+    }
+    setCurrentPage(1);
+  };
+
+  // Handle custom price apply
+  const handleCustomPriceApply = () => {
+    if (customMinPrice || customMaxPrice) {
+      setSelectedPriceRange({
+        min: customMinPrice ? parseFloat(customMinPrice) : undefined,
+        max: customMaxPrice ? parseFloat(customMaxPrice) : undefined,
+      });
+      setCurrentPage(1);
+    }
+  };
+
+  // Handle badge selection
+  const handleBadgeSelect = (badge: string) => {
+    setSelectedBadge(badge);
+    setCurrentPage(1);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+    setSelectedBrands([]);
+    setSelectedPriceRange(null);
+    setCustomMinPrice('');
+    setCustomMaxPrice('');
+    setSelectedBadge('all');
+    setCurrentPage(1);
+  };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
+  // Get current badge label for header
+  const currentBadgeLabel = badgeOptions.find(b => b.value === selectedBadge)?.label || selectedBadge || 'All Products';
+
+  // Filter Sidebar Content (shared between desktop and mobile)
+  const FilterContent = () => (
+    <ProductFilters
+      categories={categories}
+      selectedCategory={selectedCategory}
+      selectedSubcategory={selectedSubcategory}
+      categoryMode="select"
+      onSelectCategory={handleCategorySelect}
+      onSelectSubcategory={handleSubcategorySelect}
+      availableBrands={availableBrands}
+      selectedBrands={selectedBrands}
+      onBrandToggle={handleBrandToggle}
+      selectedPriceRange={selectedPriceRange}
+      onPriceRangeSelect={handlePriceRangeSelect}
+      customMinPrice={customMinPrice}
+      customMaxPrice={customMaxPrice}
+      setCustomMinPrice={setCustomMinPrice}
+      setCustomMaxPrice={setCustomMaxPrice}
+      onCustomPriceApply={handleCustomPriceApply}
+      selectedBadge={selectedBadge}
+      onBadgeSelect={handleBadgeSelect}
+      badgeOptions={badgeOptions}
+      activeFilterCount={activeFilterCount}
+      onClearAll={clearAllFilters}
+    />
+  );
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      {/* Breadcrumb */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Link href="/" className="text-gray-500 hover:text-[#e63946]">
+              Home
+            </Link>
+            <IconChevronRight size={14} className="text-gray-400" />
+            {selectedCategory ? (
+              <>
+                <Link href="/products" className="text-gray-500 hover:text-[#e63946]">
+                  All Products
+                </Link>
+                <IconChevronRight size={14} className="text-gray-400" />
+                {selectedSubcategory ? (
+                  <>
+                    <button
+                      onClick={() => handleSubcategorySelect(null)}
+                      className="text-gray-500 hover:text-[#e63946]"
+                    >
+                      {selectedCategory.name}
+                    </button>
+                    <IconChevronRight size={14} className="text-gray-400" />
+                    <span className="text-gray-800 font-medium">{selectedSubcategory.name}</span>
+                  </>
+                ) : (
+                  <span className="text-gray-800 font-medium">{selectedCategory.name}</span>
+                )}
+              </>
+            ) : selectedBadge !== 'all' ? (
+              <>
+                <Link href="/products" className="text-gray-500 hover:text-[#e63946]">
+                  All Products
+                </Link>
+                <IconChevronRight size={14} className="text-gray-400" />
+                <span className="text-gray-800 font-medium">{currentBadgeLabel}</span>
+              </>
+            ) : (
+              <span className="text-gray-800 font-medium">All Products</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Page Header */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-800">
+            {selectedSubcategory?.name || selectedCategory?.name || (selectedBadge !== 'all' ? currentBadgeLabel : 'All Products')}
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            {selectedBadge !== 'all' && selectedBadge !== 'Bestseller' && selectedBadge !== 'Trending' 
+              ? `Discover our ${currentBadgeLabel.toLowerCase()}`
+              : 'Discover our wide range of quality products'}
+          </p>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="flex gap-4 sm:gap-6">
+          {/* Sidebar - Desktop */}
+          <div className="w-64 flex-shrink-0 hidden lg:block">
+            <div className="bg-white rounded-lg p-4 sticky top-24">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                <IconAdjustments size={20} className="text-gray-600" />
+                <h3 className="font-semibold text-gray-800">Filters</h3>
+              </div>
+              <FilterContent />
+            </div>
+          </div>
+
+          {/* Products */}
+          <div className="flex-1">
+            {/* Sort Bar */}
+            <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 flex items-center justify-between gap-2">
+              <p className="text-gray-600 text-xs sm:text-sm">
+                <span className="hidden sm:inline">
+                  Showing {totalCount > 0 ? startIndex + 1 : 0}-{Math.min(startIndex + itemsPerPage, totalCount)} of{' '}
+                  {totalCount} products
+                </span>
+                <span className="sm:hidden">{totalCount} items</span>
+              </p>
+              <div className="flex items-center gap-2">
+                {/* Mobile Filter Button */}
+                <button
+                  onClick={() => setShowMobileFilter(true)}
+                  className="lg:hidden flex items-center gap-1 px-3 py-1.5 border rounded text-sm relative"
+                >
+                  <IconFilter size={16} />
+                  <span>Filter</span>
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#e63946] text-white text-xs rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Sort Dropdown */}
+                <SortDropdown
+                  options={SORT_OPTIONS}
+                  value={selectedSort}
+                  onChange={handleSortChange}
+                />
+              </div>
+            </div>
+
+            {/* Products Grid */}
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                {[...Array(itemsPerPage)].map((_, i) => (
+                  <div key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden animate-pulse">
+                    <div className="aspect-square bg-gray-200"></div>
+                    <div className="p-3">
+                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-6 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                {products.map((product) => (
+                  <DynamicProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg p-8 sm:p-12 text-center">
+                <p className="text-gray-500 mb-4">No products found matching your filters.</p>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearAllFilters} className="text-[#e63946] hover:underline text-sm">
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 sm:p-2 rounded border disabled:opacity-50 hover:bg-gray-100"
+                >
+                  <IconChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                </button>
+                {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm ${
+                        currentPage === pageNum ? 'bg-[#e63946] text-white' : 'border hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 sm:p-2 rounded border disabled:opacity-50 hover:bg-gray-100"
+                >
+                  <IconChevronRight size={18} className="sm:w-5 sm:h-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Filter Overlay */}
+      {showMobileFilter && (
+        <div className="fixed inset-0 bg-black/50 z-50 lg:hidden" onClick={() => setShowMobileFilter(false)}>
+          <div
+            className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <IconAdjustments size={20} className="text-gray-600" />
+                <h3 className="font-semibold text-gray-800">Filters</h3>
+                {activeFilterCount > 0 && (
+                  <span className="px-2 py-0.5 bg-[#e63946] text-white text-xs rounded-full">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setShowMobileFilter(false)} className="p-1">
+                <IconX size={24} />
+              </button>
+            </div>
+            <div className="p-4">
+              <FilterContent />
+            </div>
+            {/* Apply Button - Fixed at bottom */}
+            <div className="sticky bottom-0 p-4 bg-white border-t">
+              <button
+                onClick={() => setShowMobileFilter(false)}
+                className="w-full py-3 bg-[#e63946] text-white rounded-lg font-medium hover:bg-[#d62839]"
+              >
+                Apply Filters ({totalCount} products)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

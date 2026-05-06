@@ -1,0 +1,529 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { PosProductFormData } from "@/types/product";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import axiosInstance from "@/lib/axios";
+
+interface PosProductEditProps {
+  productId: string;
+}
+
+export const PosProductEdit: React.FC<PosProductEditProps> = ({
+  productId,
+}) => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof PosProductFormData, string>>
+  >({});
+  const [categories, setCategories] = useState<string[]>([]);
+
+  const [formData, setFormData] = useState<PosProductFormData>({
+    itemName: "",
+    category: "",
+    itemCode: "",
+    barcode: "",
+    brand: "",
+    uom: "",
+    purchasePrice: 0,
+    sellingPrice: 0,
+    mrp: 0,
+    gstPercentage: 0,
+    hsnCode: "",
+    discountType: "",
+    discountValue: 0,
+    warehouse: "Default",
+    openingStock: 0,
+    quantity: 0,
+    lowStockAlertLevel: 0,
+    status: "in_stock",
+    display: "inactive",
+    expiryDate: undefined,
+    mfgDate: undefined,
+    batchNo: "",
+    safetyInformation: "",
+    description: "",
+    itemImage: "",
+  });
+
+  const UOM_OPTIONS = [
+    "Piece",
+    "Box",
+    "Kg",
+    "Litre",
+    "Meter",
+    "Dozen",
+    "Pack",
+    "Unit",
+  ];
+
+  useEffect(() => {
+    fetchCategories();
+    fetchProduct();
+  }, [productId]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "/api/offline/categories?isActive=true"
+      );
+      if (response.data.success) {
+        const categoryNames = response.data.data.map(
+          (cat: { name: string }) => cat.name
+        );
+        setCategories(categoryNames);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([]);
+    }
+  };
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(
+        `/api/offline/products/${productId}`
+      );
+
+      if (response.data.success) {
+        const product = response.data.data;
+        setFormData({
+          itemName: product.itemName,
+          category: product.category,
+          itemCode: product.itemCode || "",
+          barcode: product.barcode || "",
+          brand: product.brand || "",
+          uom: product.uom,
+          purchasePrice: product.purchasePrice,
+          sellingPrice: product.sellingPrice || 0,
+          mrp: product.mrp || 0,
+          gstPercentage: product.gstPercentage,
+          hsnCode: product.hsnCode || "",
+          discountType: product.discountType || "",
+          discountValue: product.discountValue || 0,
+          warehouse: product.warehouse,
+          openingStock: product.openingStock,
+          quantity: product.quantity,
+          lowStockAlertLevel: product.lowStockAlertLevel,
+          status: product.status,
+          display: product.display || "inactive",
+          expiryDate: product.expiryDate
+            ? new Date(product.expiryDate)
+            : undefined,
+          mfgDate: product.mfgDate
+            ? new Date(product.mfgDate)
+            : undefined,
+          batchNo: product.batchNo || "",
+          safetyInformation: product.safetyInformation || "",
+          description: product.description || "",
+          itemImage: product.itemImage || "",
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to load product");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof PosProductFormData, string>> = {};
+
+    if (!formData.itemName.trim()) {
+      newErrors.itemName = "Item name is required";
+    }
+    if (!formData.category) {
+      newErrors.category = "Category is required";
+    }
+    if (!formData.uom) {
+      newErrors.uom = "Unit of measurement is required";
+    }
+    if (!formData.purchasePrice || formData.purchasePrice < 0) {
+      newErrors.purchasePrice = "Valid purchase price is required";
+    }
+    if (!formData.sellingPrice || formData.sellingPrice < 0) {
+      newErrors.sellingPrice = "Valid selling price is required";
+    }
+    if (formData.gstPercentage < 0 || formData.gstPercentage > 100) {
+      newErrors.gstPercentage = "GST % must be between 0 and 100";
+    }
+    if (formData.openingStock < 0) {
+      newErrors.openingStock = "Valid opening stock is required";
+    }
+    if (formData.quantity < 0) {
+      newErrors.quantity = "Valid quantity is required";
+    }
+    if (formData.lowStockAlertLevel < 0) {
+      newErrors.lowStockAlertLevel = "Valid low stock alert level is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await axiosInstance.put(`/api/offline/products/${productId}`, formData);
+      toast.success("Product updated successfully");
+      router.push("/dashboard/pos/products");
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.error || error.message || "An error occurred";
+      toast.error(`Failed to update product: ${errorMessage}`);
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChange = (
+    field: keyof PosProductFormData,
+    value: string | number | Date | undefined
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error for this field
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" />
+          <span className="text-muted-foreground">Loading product...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Edit Product</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Update product information (synced from inventory)
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Row 1: Item Name & Category */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="itemName">
+              Item Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="itemName"
+              type="text"
+              value={formData.itemName}
+              onChange={(e) => handleChange("itemName", e.target.value)}
+              placeholder="Enter item name"
+              className={cn(errors.itemName && "border-destructive")}
+            />
+            {errors.itemName && (
+              <p className="text-xs text-destructive">{errors.itemName}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">
+              Category <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => handleChange("category", value)}
+            >
+              <SelectTrigger
+                className={cn(
+                  "w-full",
+                  errors.category && "border-destructive"
+                )}
+              >
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    No categories available
+                  </div>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.category && (
+              <p className="text-xs text-destructive">{errors.category}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Item Code & UOM */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="itemCode">Item Code / SKU (optional)</Label>
+            <Input
+              id="itemCode"
+              type="text"
+              value={formData.itemCode}
+              onChange={(e) => handleChange("itemCode", e.target.value)}
+              placeholder="Enter item code or SKU"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="uom">
+              Unit of Measurement (UOM) <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={formData.uom}
+              onValueChange={(value) => handleChange("uom", value)}
+            >
+              <SelectTrigger
+                className={cn("w-full", errors.uom && "border-destructive")}
+              >
+                <SelectValue placeholder="Select UOM" />
+              </SelectTrigger>
+              <SelectContent>
+                {UOM_OPTIONS.map((uom) => (
+                  <SelectItem key={uom} value={uom}>
+                    {uom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.uom && (
+              <p className="text-xs text-destructive">{errors.uom}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Purchase Price & GST % */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="purchasePrice">
+              Purchase Price <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.purchasePrice}
+              onChange={(e) =>
+                handleChange("purchasePrice", parseFloat(e.target.value) || 0)
+              }
+              placeholder="0.00"
+              className={cn(errors.purchasePrice && "border-destructive")}
+            />
+            {errors.purchasePrice && (
+              <p className="text-xs text-destructive">
+                {errors.purchasePrice}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gstPercentage">
+              GST % <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="gstPercentage"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={formData.gstPercentage}
+              onChange={(e) =>
+                handleChange("gstPercentage", parseFloat(e.target.value) || 0)
+              }
+              placeholder="0.00"
+              className={cn(errors.gstPercentage && "border-destructive")}
+            />
+            {errors.gstPercentage && (
+              <p className="text-xs text-destructive">
+                {errors.gstPercentage}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 4: HSN Code */}
+        <div className="space-y-2">
+          <Label htmlFor="hsnCode">HSN Code (optional)</Label>
+          <Input
+            id="hsnCode"
+            type="text"
+            value={formData.hsnCode}
+            onChange={(e) => handleChange("hsnCode", e.target.value)}
+            placeholder="Enter HSN code"
+          />
+        </div>
+
+        {/* Row 5: Opening Stock, Quantity & Low Stock Alert Level */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="openingStock">
+              Opening Stock <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="openingStock"
+              type="number"
+              min="0"
+              value={formData.openingStock}
+              onChange={(e) =>
+                handleChange("openingStock", parseInt(e.target.value) || 0)
+              }
+              placeholder="0"
+              className={cn(errors.openingStock && "border-destructive")}
+            />
+            {errors.openingStock && (
+              <p className="text-xs text-destructive">{errors.openingStock}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="quantity">
+              Current Quantity <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="0"
+              value={formData.quantity}
+              onChange={(e) =>
+                handleChange("quantity", parseInt(e.target.value) || 0)
+              }
+              placeholder="0"
+              className={cn(errors.quantity && "border-destructive")}
+              disabled
+            />
+            <p className="text-xs text-muted-foreground">
+              Quantity is managed by inventory system
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lowStockAlertLevel">
+              Low Stock Alert Level <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="lowStockAlertLevel"
+              type="number"
+              min="0"
+              value={formData.lowStockAlertLevel}
+              onChange={(e) =>
+                handleChange(
+                  "lowStockAlertLevel",
+                  parseInt(e.target.value) || 0
+                )
+              }
+              placeholder="0"
+              className={cn(errors.lowStockAlertLevel && "border-destructive")}
+            />
+            {errors.lowStockAlertLevel && (
+              <p className="text-xs text-destructive">
+                {errors.lowStockAlertLevel}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Row 6: Status */}
+        <div className="space-y-2">
+          <Label htmlFor="status">
+            Status <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={formData.status}
+            onValueChange={(value) => handleChange("status", value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="in_stock">In Stock</SelectItem>
+              <SelectItem value="low_stock">Low Stock</SelectItem>
+              <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleChange("description", e.target.value)}
+            placeholder="Enter item description"
+            rows={4}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-4 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
