@@ -430,7 +430,7 @@ export default function PartnerReports() {
                     <AvatarImage
                       src={
                         partner.profilePhoto
-                          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/image?key=${partner.profilePhoto}`
+                          ? `/image/${partner.profilePhoto}`
                           : undefined
                       }
                       alt={partner.name}
