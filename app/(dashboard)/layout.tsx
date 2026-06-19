@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/Layouts/dashboardlayout";
 import { AdminRouteGuard } from "@/components/auth/admin-route-guard";
+import { SocketProvider } from "@/components/providers/socket-provider";
 
 export default function Layout({
   children,
@@ -8,7 +9,9 @@ export default function Layout({
 }) {
   return (
     <AdminRouteGuard>
-      <DashboardLayout>{children}</DashboardLayout>
+      <SocketProvider>
+        <DashboardLayout>{children}</DashboardLayout>
+      </SocketProvider>
     </AdminRouteGuard>
   );
 }

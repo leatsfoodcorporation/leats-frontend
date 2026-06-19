@@ -85,10 +85,11 @@ export const subscribeToAdminEvents = (callbacks: {
   onPartnerOnline?: (data: any) => void;
   onNewOrder?: (data: any) => void;
   onDeliveryUpdate?: (data: any) => void;
+  onOrderStatusUpdated?: (data: any) => void;
 }) => {
   if (socket) {
     console.log('📡 Subscribing to admin events:', Object.keys(callbacks).filter(k => callbacks[k as keyof typeof callbacks]));
-    
+
     if (callbacks.onPartnerLocation) {
       socket.on('admin:partner-location', (data) => {
         console.log('📍 Received partner location update:', data);
@@ -107,6 +108,9 @@ export const subscribeToAdminEvents = (callbacks: {
     if (callbacks.onDeliveryUpdate) {
       socket.on('delivery:update', callbacks.onDeliveryUpdate);
     }
+    if (callbacks.onOrderStatusUpdated) {
+      socket.on('order_status_updated', callbacks.onOrderStatusUpdated);
+    }
   }
 };
 
@@ -117,6 +121,7 @@ export const unsubscribeFromAdminEvents = (): void => {
     socket.off('admin:partner-online');
     socket.off('new_order');
     socket.off('delivery:update');
+    socket.off('order_status_updated');
   }
 };
 

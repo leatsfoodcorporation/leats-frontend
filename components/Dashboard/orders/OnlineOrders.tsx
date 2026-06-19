@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { subscribeToEvent, unsubscribeFromEvent } from "@/lib/socket/socketClient";
 import {
   IconSearch,
   IconEye,
@@ -213,6 +214,22 @@ export function OnlineOrders() {
     loadCompanySettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter, paymentStatusFilter, paymentMethodFilter]);
+
+  // Real-time: listen for new orders and status updates from backend
+  useEffect(() => {
+    const handleNewOrder = (data: { type?: string }) => {
+      if (!data.type || data.type === "online") loadOrders();
+    };
+    const handleStatusUpdate = () => loadOrders();
+
+    subscribeToEvent("new_order", handleNewOrder);
+    subscribeToEvent("order_status_updated", handleStatusUpdate);
+    return () => {
+      unsubscribeFromEvent("new_order", handleNewOrder);
+      unsubscribeFromEvent("order_status_updated", handleStatusUpdate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadCompanySettings = async () => {
     try {
