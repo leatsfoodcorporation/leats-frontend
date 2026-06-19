@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { subscribeToAdminEvents, unsubscribeFromAdminEvents } from "@/lib/socket/socketClient";
 import { Loading } from "@/components/ui/loading";
 import { dashboardService } from "@/services/dashboard/dashboardService";
 import type { DashboardData } from "@/types/dashboard";
@@ -63,6 +64,17 @@ export default function Dashboard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
+
+  // Real-time: listen for new orders and status updates from backend
+  useEffect(() => {
+    subscribeToAdminEvents({
+      onNewOrder: () => loadDashboardData(),
+      onDeliveryUpdate: () => loadDashboardData(),
+      onOrderStatusUpdated: () => loadDashboardData(),
+    });
+    return () => unsubscribeFromAdminEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadDashboardData = async () => {
     try {

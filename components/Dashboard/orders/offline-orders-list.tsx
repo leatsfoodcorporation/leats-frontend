@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { subscribeToEvent, unsubscribeFromEvent } from "@/lib/socket/socketClient";
 import {
   Table,
   TableBody,
@@ -99,6 +100,18 @@ export function OfflineOrdersList() {
     loadCompanySettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter, paymentMethodFilter]);
+
+  // Real-time: listen for new POS orders from backend
+  useEffect(() => {
+    const handleNewOrder = (data: { type?: string }) => {
+      if (!data.type || data.type === "pos") fetchOrders();
+    };
+    subscribeToEvent("new_order", handleNewOrder);
+    return () => {
+      unsubscribeFromEvent("new_order", handleNewOrder);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadCompanySettings = async () => {
     try {
