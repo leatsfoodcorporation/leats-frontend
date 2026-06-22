@@ -209,17 +209,16 @@ export default function DynamicProductCard({
 
   return (
     <div
-      className="bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-shadow group relative overflow-visible flex flex-col"
-      style={{ minHeight: '420px' }}
+      className="bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-shadow group relative flex flex-col overflow-hidden"
     >
       {/* Wishlist Icon */}
       <button
         onClick={handleWishlistToggle}
-        className="absolute top-2 left-2 sm:top-2 sm:left-2 z-20 p-2 sm:p-1.5 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
+        className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10 p-1 sm:p-1.5 bg-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
         aria-label="Add to wishlist"
       >
         <IconHeart
-          size={18}
+          size={14}
           className={`sm:w-5 sm:h-5 transition-colors ${
             isWishlisted
               ? "fill-red-500 text-red-500"
@@ -270,7 +269,7 @@ export default function DynamicProductCard({
       </Link>
 
       {/* Product Info */}
-      <div className="p-3 sm:p-3 flex flex-col flex-1">
+      <div className="p-2 sm:p-3 flex flex-col flex-1">
         {/* Brand */}
         <p className="text-xs sm:text-xs text-gray-500 mb-1">
           {product.brand}
@@ -278,7 +277,7 @@ export default function DynamicProductCard({
 
         {/* Product Display Name (from variant) */}
         <Link href={productUrl} target="_blank" rel="noopener noreferrer">
-          <h3 className="text-sm sm:text-sm font-medium text-gray-800 mb-2 sm:mb-1.5 line-clamp-2 min-h-[40px] sm:min-h-[40px] hover:text-[#e63946] transition-colors">
+          <h3 className="text-xs sm:text-sm font-medium text-gray-800 mb-1.5 sm:mb-1.5 line-clamp-2 min-h-[32px] sm:min-h-[40px] hover:text-[#e63946] transition-colors">
             {currentVariant?.displayName ||
               product.shortDescription ||
               currentVariant?.variantName}
@@ -384,13 +383,13 @@ export default function DynamicProductCard({
         </div>
 
         {/* Price */}
-        <div className="flex items-center gap-2 sm:gap-2 mb-2 sm:mb-2">
-          <span className="text-lg sm:text-lg font-bold text-gray-900">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+          <span className="text-sm sm:text-lg font-bold text-gray-900">
             {currencySymbol}
             {price.toFixed(0)}
           </span>
           {discountPercentage > 0 && (
-            <span className="text-sm sm:text-sm text-gray-400 line-through">
+            <span className="text-xs sm:text-sm text-gray-400 line-through">
               {currencySymbol}
               {mrp.toFixed(0)}
             </span>
@@ -477,7 +476,7 @@ export default function DynamicProductCard({
             <button
               onClick={handleAddToCart}
               disabled={isOutOfStock}
-              className="flex-1 py-2.5 sm:py-2 px-4 sm:px-4 bg-[#e63946] text-white rounded font-medium hover:bg-[#d62839] transition-all duration-200 active:scale-95 text-sm sm:text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="flex-1 py-2 sm:py-2 px-3 sm:px-4 bg-[#e63946] text-white rounded font-medium hover:bg-[#d62839] transition-all duration-200 active:scale-95 text-xs sm:text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
