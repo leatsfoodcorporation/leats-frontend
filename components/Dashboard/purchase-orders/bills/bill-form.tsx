@@ -226,6 +226,15 @@ export default function BillForm({
     return parts.join(", ");
   };
 
+  // Convert quantity to base UOM for price calculation (same as purchase-form)
+  const getQuantityInBaseUom = (quantity: number, uom: string, itemId: string): number => {
+    const invItem = items.find(i => i.id === itemId);
+    if (!invItem?.availableUoms || invItem.availableUoms.length === 0) return quantity;
+    const uomConfig = (invItem.availableUoms as { uom: string; conversionFactor: number }[]).find(u => u.uom === uom);
+    if (!uomConfig || uomConfig.conversionFactor <= 0) return quantity;
+    return quantity / uomConfig.conversionFactor;
+  };
+
   // Fetch GRN number from backend
   const fetchGRNNumber = async (): Promise<string> => {
     try {
@@ -369,7 +378,7 @@ export default function BillForm({
 
   const calculateTotals = () => {
     const subTotal = formData.items.reduce(
-      (sum, item) => sum + item.quantityReceived * item.purchasePrice,
+      (sum, item) => sum + getQuantityInBaseUom(item.quantityReceived, item.uom || '', item.itemId || '') * item.purchasePrice,
       0
     );
 
@@ -468,8 +477,9 @@ export default function BillForm({
           const halfRate = rate / 2;
           const itemId = Date.now().toString() + Math.random();
 
-          // Calculate GST amounts immediately
-          const itemTotal = item.quantity * item.price;
+          // Calculate GST amounts immediately (convert quantity to base UOM)
+          const baseQty = getQuantityInBaseUom(item.quantity, item.uom || '', item.itemId || '');
+          const itemTotal = baseQty * item.price;
           const cgstAmount =
             newGstType === "cgst_sgst" ? (itemTotal * halfRate) / 100 : 0;
           const sgstAmount =
@@ -678,13 +688,15 @@ export default function BillForm({
         if (item.id === id) {
           const updated = { ...item, [field]: value };
 
-          // Recalculate item totals when quantity, price, or GST changes
+          // Recalculate item totals when quantity, price, UOM, or GST changes
           if (
             field === "quantityReceived" ||
             field === "purchasePrice" ||
+            field === "uom" ||
             field === "gstPercentage"
           ) {
-            const itemTotal = updated.quantityReceived * updated.purchasePrice;
+            const baseQty = getQuantityInBaseUom(updated.quantityReceived, updated.uom || '', updated.itemId || '');
+            const itemTotal = baseQty * updated.purchasePrice;
 
             // Calculate GST amounts (no per-item discount)
             updated.cgstAmount = (itemTotal * updated.cgstPercentage) / 100;
@@ -719,8 +731,9 @@ export default function BillForm({
         ...prev,
         items: prev.items.map((billItem) => {
           if (billItem.id === billItemId) {
-            // Calculate GST amounts immediately (no per-item discount)
-            const itemTotal = billItem.quantityReceived * item.purchasePrice;
+            // Calculate GST amounts immediately (convert to base UOM)
+            const baseQty = getQuantityInBaseUom(billItem.quantityReceived, item.uom || billItem.uom || '', itemId);
+            const itemTotal = baseQty * item.purchasePrice;
 
             const cgstAmount = currentGstType === "cgst_sgst" ? (itemTotal * halfRate) / 100 : 0;
             const sgstAmount = currentGstType === "cgst_sgst" ? (itemTotal * halfRate) / 100 : 0;
@@ -1699,10 +1712,10 @@ export default function BillForm({
               </Label>
               <div className="flex items-center gap-1.5">
                 {(() => {
-                  // Recalculate from items (fresh calculation)
+                  // Recalculate from items (fresh calculation with UOM conversion)
                   const subTotal = formData.items.reduce(
                     (sum, item) =>
-                      sum + item.quantityReceived * item.purchasePrice,
+                      sum + getQuantityInBaseUom(item.quantityReceived, item.uom || '', item.itemId || '') * item.purchasePrice,
                     0
                   );
 
