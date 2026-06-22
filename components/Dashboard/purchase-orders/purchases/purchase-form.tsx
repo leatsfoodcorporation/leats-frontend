@@ -1183,10 +1183,11 @@ export default function PurchaseForm({
                             updateItem(
                               item.id,
                               "quantity",
-                              parseInt(e.target.value) || 0
+                              parseFloat(e.target.value) || 0
                             )
                           }
-                          min="1"
+                          min="0.001"
+                          step="any"
                           className="h-8 w-[80px] text-xs"
                           required
                         />

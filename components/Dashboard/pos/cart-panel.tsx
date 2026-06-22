@@ -190,10 +190,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       type="number"
                       value={item.quantity}
                       onChange={(e) =>
-                        onUpdateQuantity(item.id, parseInt(e.target.value) || 1)
+                        onUpdateQuantity(item.id, parseFloat(e.target.value) || 1)
                       }
                       className="w-16 h-8 text-center rounded-lg border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
-                      min="1"
+                      min="0.001"
+                      step="any"
                       max={item.stock}
                     />
                     <button

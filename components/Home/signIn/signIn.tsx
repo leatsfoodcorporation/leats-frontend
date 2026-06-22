@@ -83,6 +83,9 @@ export const SignIn = () => {
           {
             ...formData,
             fcmToken, // Send FCM token with login
+          },
+          {
+            withCredentials: false, // Login doesn't need cookies — JWT comes in response body
           }
         );
 
@@ -122,9 +125,19 @@ export const SignIn = () => {
           }));
         }
       } catch (error: unknown) {
-        const errorMessage =
-          (error as { response?: { data?: { error?: string } } })?.response
-            ?.data?.error || "Network error. Please try again.";
+        const axiosError = error as { response?: { data?: { error?: string } }; message?: string; code?: string };
+        let errorMessage = axiosError?.response?.data?.error || "";
+
+        if (!errorMessage) {
+          // Provide specific messages for common network errors
+          if (axiosError?.code === 'ERR_NETWORK' || axiosError?.message === 'Network Error') {
+            errorMessage = "Unable to connect to server. Please check your internet connection and try again.";
+          } else if (axiosError?.code === 'ECONNABORTED') {
+            errorMessage = "Request timed out. Please try again.";
+          } else {
+            errorMessage = "Something went wrong. Please try again.";
+          }
+        }
 
         setErrors((prev) => ({
           ...prev,
