@@ -103,11 +103,6 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
 
   if (!order) return null;
 
-  const formatCurrency = (amount: number | undefined) => {
-    const value = amount ?? 0;
-    return `${currencySymbol}${value.toFixed(2)}`;
-  };
-
   const formatThermalCurrency = (amount: number | undefined) => {
     const value = amount ?? 0;
     return value.toFixed(2);
@@ -666,133 +661,80 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
           </DialogTitle>
         </DialogHeader>
 
-        {/* Thermal Print Preview */}
+        {/* Thermal Print Preview — matches print output exactly */}
         <div className="bg-white border rounded-lg overflow-hidden">
           <div className="bg-gray-100 px-4 py-2 border-b">
             <p className="text-xs text-gray-600 text-center">Thermal Print Preview (80mm)</p>
           </div>
-          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", lineHeight: "1.4" }}>
+          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Roboto Mono', 'Lucida Console', 'Consolas', monospace", fontSize: "11px", lineHeight: "1.3", letterSpacing: "-0.3px" }}>
             <div ref={printRef}>
-              {/* Invoice Header */}
-              <div className="text-center border-b-2 border-dashed border-gray-800 pb-3 mb-3">
+              {/* Header */}
+              <div className="text-center mb-1">
                 {companySettings?.logoUrl && (
-                  <div className="relative w-40 h-20 flex items-center justify-center overflow-hidden mx-auto">
-                    <Image 
-                      src={companySettings.logoUrl} 
-                      alt="Company Logo" 
-                      fill
-                      sizes="160px"
-                      className="object-contain"
-                      priority={true}
-                      quality={90}
-                    />
+                  <div className="relative w-24 h-10 flex items-center justify-center overflow-hidden mx-auto mb-1">
+                    <Image src={companySettings.logoUrl} alt="Logo" fill sizes="96px" className="object-contain" priority quality={90} />
                   </div>
                 )}
+                <div className="text-[13px] font-bold tracking-wide">{companySettings?.companyName || 'LEATS'}</div>
+                {companySettings?.address && <div className="text-[9px]">{companySettings.address}</div>}
+                {companySettings?.city && <div className="text-[9px]">{companySettings.city}, {companySettings?.state} {companySettings?.zipCode}</div>}
+                {companySettings?.phone && <div className="text-[9px]">Ph: {companySettings.phone}</div>}
+                {companySettings?.gstNumber && <div className="text-[9px]">GSTIN: {companySettings.gstNumber}</div>}
               </div>
+              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
 
-              {/* Invoice Info */}
-              <div className="mb-3 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span>Invoice No:</span>
-                  <span className="font-semibold">{order.invoiceNumber || order.orderNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Order No:</span>
-                  <span>{order.orderNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Date:</span>
-                  <span>{formatDate(order.createdAt)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Time:</span>
-                  <span>{new Date(order.createdAt).toLocaleTimeString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Customer:</span>
-                  <span>{order.customerName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Phone:</span>
-                  <span>{order.customerPhone}</span>
-                </div>
+              {/* Bill Info */}
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[10px]"><span>Bill No</span><span className="font-bold">{order.invoiceNumber || order.orderNumber}</span></div>
+                <div className="flex justify-between text-[10px]"><span>Order No</span><span>{order.orderNumber}</span></div>
+                <div className="flex justify-between text-[10px]"><span>Date</span><span>{formatDate(order.createdAt)}</span></div>
+                <div className="flex justify-between text-[10px]"><span>Time</span><span>{new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span></div>
+              </div>
+              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
+
+              {/* Customer Info */}
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[10px]"><span>Customer</span><span>{order.customerName}</span></div>
+                <div className="flex justify-between text-[10px]"><span>Phone</span><span>{order.customerPhone || 'N/A'}</span></div>
                 {order.deliveryAddress && (
                   <>
-                    <div className="flex justify-between">
-                      <span>Delivery:</span>
-                      <span>{order.deliveryAddress.name || order.customerName}</span>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      <div>{order.deliveryAddress.addressLine1}</div>
-                      {order.deliveryAddress.addressLine2 && (
-                        <div>{order.deliveryAddress.addressLine2}</div>
-                      )}
+                    <div className="flex justify-between text-[10px]"><span>Delivery To</span><span>{order.deliveryAddress.name || order.customerName}</span></div>
+                    <div className="text-[9px] leading-tight">
+                      <div>{order.deliveryAddress.addressLine1}{order.deliveryAddress.addressLine2 ? `, ${order.deliveryAddress.addressLine2}` : ''}</div>
                       <div>{order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</div>
                     </div>
                   </>
                 )}
               </div>
+              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">================================================</div>
 
-              {/* Items Table */}
-              <div className="border-t border-b border-dashed border-gray-800 py-2 my-3">
-                <table className="w-full table-fixed text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left font-semibold pb-1 w-[40%]">Item</th>
-                      <th className="text-center font-semibold pb-1 w-[14%]">Qty/UOM</th>
-                      <th className="text-right font-semibold pb-1 w-[20%]">Price</th>
-                      <th className="text-right font-semibold pb-1 w-[26%]">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.items.map((item, index) => {
-                      return (
-                        <Fragment key={`item-${index}`}>
-                          <tr>
-                            <td className="align-top py-0.5 pr-1 break-words font-semibold">{item.displayName || item.variantName || item.productName}</td>
-                            <td className="align-top py-0.5 text-center whitespace-nowrap">{formatOrderItemQuantity(item.quantity, item.variantUom, item.variantUomValue)}</td>
-                            <td className="align-top py-0.5 text-right whitespace-nowrap">{formatCurrency(item.unitPrice)}</td>
-                            <td className="align-top py-0.5 text-right whitespace-nowrap font-semibold">{formatCurrency(item.totalPrice || item.total)}</td>
-                          </tr>
-                          {item.selectedCuttingStyle && (
-                            <tr>
-                              <td colSpan={5} className="text-[11px] text-gray-600 pb-1">Cutting: {item.selectedCuttingStyle}</td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Items */}
+              <div className="space-y-1">
+                {order.items.map((item, index) => (
+                  <div key={`item-${index}`}>
+                    <div className="text-[10px] font-bold break-words">
+                      {item.displayName || item.variantName || item.productName}
+                      {item.selectedCuttingStyle && <div className="font-normal text-[9px]">&nbsp;&nbsp;Cutting: {item.selectedCuttingStyle}</div>}
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span>{item.quantity} x {formatThermalCurrency(item.unitPrice)}</span>
+                      <span>{formatThermalCurrency(item.totalPrice || item.total)}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
+              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">================================================</div>
 
               {/* Totals */}
-              <div className="mt-3 space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(order.subtotal)}</span>
-                </div>
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[10px]"><span>Sub Total</span><span>{formatThermalCurrency(order.subtotal)}</span></div>
                 {(order.discount ?? 0) > 0 && (
-                  <div className="flex justify-between text-xs text-green-600">
-                    <span>Discount:</span>
-                    <span>-{formatCurrency(order.discount)}</span>
-                  </div>
+                  <div className="flex justify-between text-[10px]"><span>Discount</span><span>-{formatThermalCurrency(order.discount)}</span></div>
                 )}
                 {(order.couponDiscount ?? 0) > 0 && (
-                  <div className="flex justify-between text-xs text-green-600">
-                    <span>Coupon Discount:</span>
-                    <span>-{formatCurrency(order.couponDiscount)}</span>
-                  </div>
+                  <div className="flex justify-between text-[10px]"><span>Coupon ({order.couponCode || ''})</span><span>-{formatThermalCurrency(order.couponDiscount)}</span></div>
                 )}
-                <div className="flex justify-between text-xs">
-                  <span>Shipping:</span>
-                  <span>{(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatCurrency(order.shippingCharge)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span>GST%:</span>
-                  <span>{getGstPercentageText(order)}</span>
-                </div>
-                
+                <div className="flex justify-between text-[10px]"><span>Shipping</span><span>{(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatThermalCurrency(order.shippingCharge)}</span></div>
                 {/* GST Breakdown */}
                 {order.gstType === 'cgst_sgst' ? (
                   <>
@@ -800,81 +742,45 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
                       const breakdown = getCgstSgstRateBreakdown(order);
                       if (breakdown.length > 0) {
                         return breakdown.map((entry) => (
-                          <Fragment key={`gst-split-${entry.rate}`}>
-                            <div className="flex justify-between text-xs">
-                              <span>CGST {formatGstRateLabel(entry.rate)}:</span>
-                              <span>{formatCurrency(entry.cgst)}</span>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                              <span>SGST {formatGstRateLabel(entry.rate)}:</span>
-                              <span>{formatCurrency(entry.sgst)}</span>
-                            </div>
+                          <Fragment key={`gst-${entry.rate}`}>
+                            <div className="flex justify-between text-[10px]"><span>CGST @ {formatGstRateLabel(entry.rate)}</span><span>{formatThermalCurrency(entry.cgst)}</span></div>
+                            <div className="flex justify-between text-[10px]"><span>SGST @ {formatGstRateLabel(entry.rate)}</span><span>{formatThermalCurrency(entry.sgst)}</span></div>
                           </Fragment>
                         ));
                       }
                       return (
                         <>
-                          {(order.cgstAmount || 0) > 0 && (
-                            <div className="flex justify-between text-xs">
-                              <span>CGST:</span>
-                              <span>{formatCurrency(order.cgstAmount)}</span>
-                            </div>
-                          )}
-                          {(order.sgstAmount || 0) > 0 && (
-                            <div className="flex justify-between text-xs">
-                              <span>SGST:</span>
-                              <span>{formatCurrency(order.sgstAmount)}</span>
-                            </div>
-                          )}
+                          {(order.cgstAmount || 0) > 0 && <div className="flex justify-between text-[10px]"><span>CGST</span><span>{formatThermalCurrency(order.cgstAmount)}</span></div>}
+                          {(order.sgstAmount || 0) > 0 && <div className="flex justify-between text-[10px]"><span>SGST</span><span>{formatThermalCurrency(order.sgstAmount)}</span></div>}
                         </>
                       );
                     })()}
                   </>
-                ) : (
-                  <>
-                    {(order.igstAmount || 0) > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span>IGST:</span>
-                        <span>{formatCurrency(order.igstAmount)}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                
-                {/* Fallback for orders without GST breakdown */}
+                ) : (order.igstAmount || 0) > 0 ? (
+                  <div className="flex justify-between text-[10px]"><span>IGST</span><span>{formatThermalCurrency(order.igstAmount)}</span></div>
+                ) : null}
                 {!order.gstType && (order.tax || 0) > 0 && (
-                  <div className="flex justify-between text-xs">
-                    <span>Tax (GST):</span>
-                    <span>{formatCurrency(order.tax)}</span>
-                  </div>
+                  <div className="flex justify-between text-[10px]"><span>Tax (GST)</span><span>{formatThermalCurrency(order.tax)}</span></div>
                 )}
-                
-                <div className="flex justify-between text-sm font-bold border-t-2 border-gray-800 pt-2 mt-2">
-                  <span>FINAL TOTAL:</span>
-                  <span>{formatCurrency(order.total)}</span>
+                <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
+                <div className="flex justify-between text-[12px] font-bold">
+                  <span>GRAND TOTAL</span>
+                  <span>{currencySymbol}{formatThermalCurrency(order.total)}</span>
                 </div>
+                <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
               </div>
 
-              {/* Payment Method */}
-              <div className="mt-3 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span>Payment:</span>
-                  <span className="font-bold uppercase">{order.paymentMethod}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span className={`font-bold uppercase ${
-                    order.paymentStatus === 'completed' ? 'text-green-600' : 
-                    order.paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {order.paymentStatus}
-                  </span>
-                </div>
+              {/* Payment */}
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[10px]"><span>Payment</span><span className="font-bold uppercase">{order.paymentMethod}</span></div>
+                <div className="flex justify-between text-[10px]"><span>Status</span><span className="font-bold uppercase">{order.paymentStatus}</span></div>
               </div>
+              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
 
               {/* Footer */}
-              <div className="text-center mt-4 pt-3 border-t-2 border-dashed border-gray-800">
-                <p className="text-xs font-bold mb-1">Thank You, Please Come Again!</p>
+              <div className="text-center">
+                <div className="text-[10px] font-bold">Thank You, Visit Again!</div>
+                <div className="text-[9px]">{companySettings?.companyName || 'LEATS'}</div>
               </div>
             </div>
           </div>
