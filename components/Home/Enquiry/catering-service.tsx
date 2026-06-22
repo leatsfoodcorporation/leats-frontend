@@ -113,25 +113,25 @@ export default function CateringServiceForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 sm:py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-4 sm:py-8 md:py-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-3xl">
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-3 text-center">
-            <div className="mx-auto w-16 h-16 bg-[#e63946] rounded-full flex items-center justify-center">
-              <UtensilsCrossed className="w-8 h-8 text-white" />
+        <Card className="shadow-sm sm:shadow-lg">
+          <CardHeader className="space-y-2 sm:space-y-3 text-center px-4 sm:px-6">
+            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-[#e63946] rounded-full flex items-center justify-center">
+              <UtensilsCrossed className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <CardTitle className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900">
               Catering Service Enquiry
             </CardTitle>
-            <CardDescription className="text-base sm:text-lg">
-              Planning an event? Let us handle the catering! Fill out the form below and we'll create a customized menu for your special occasion.
+            <CardDescription className="text-xs sm:text-sm md:text-base px-2">
+              Planning an event? Let us handle the catering! Fill out the form below and we&apos;ll create a customized menu for your special occasion.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <CardContent className="px-4 sm:px-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {/* Personal Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Contact Information</h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -170,8 +170,8 @@ export default function CateringServiceForm() {
               </div>
 
               {/* Event Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Event Details</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Event Details</h3>
                 
                 <div className="space-y-2">
                   <Label htmlFor="eventType" className="text-sm font-medium">
@@ -304,11 +304,11 @@ export default function CateringServiceForm() {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-4">
+              <div className="pt-2 sm:pt-4">
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#e63946] hover:bg-[#d62839] text-white font-semibold py-6 text-base sm:text-lg"
+                  className="w-full bg-[#e63946] hover:bg-[#d62839] text-white font-semibold py-4 sm:py-6 text-sm sm:text-base md:text-lg"
                 >
                   {loading ? (
                     <>

@@ -327,7 +327,7 @@ export default function CategoryDetailClient({
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
         <div className="flex gap-4 sm:gap-6">
           {/* Sidebar - Desktop */}
           <div className="w-64 flex-shrink-0 hidden lg:block">
@@ -343,7 +343,7 @@ export default function CategoryDetailClient({
           {/* Products */}
           <div className="flex-1">
             {/* Sort Bar */}
-            <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 flex items-center justify-between gap-2">
+            <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 flex items-center justify-between gap-2 relative z-30">
               <p className="text-gray-600 text-xs sm:text-sm">
                 <span className="hidden sm:inline">{totalCount} products found</span>
                 <span className="sm:hidden">{totalCount} items</span>
