@@ -64,20 +64,21 @@ export default function RootLayout({
         <Toaster
           position="top-center"
           toastOptions={{
-            className: "border-2 border-border shadow-xl rounded-lg text-lg",
+            className: "border border-border shadow-lg rounded-lg text-sm sm:text-base",
             duration: 4000,
             style: {
               background: "var(--background)",
               color: "var(--foreground)",
-              boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)",
-              padding: "20px 24px",
-              minWidth: "400px",
-              maxWidth: "600px",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              padding: "12px 16px",
+              minWidth: "auto",
+              maxWidth: "calc(100vw - 32px)",
+              width: "100%",
             },
           }}
           richColors
           expand
-          gap={12}
+          gap={8}
         />
       </body>
     </html>
