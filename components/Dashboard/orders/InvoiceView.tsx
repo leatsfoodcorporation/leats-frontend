@@ -182,31 +182,47 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
 <meta charset="UTF-8"/>
 <title>Invoice ${order.invoiceNumber || order.orderNumber}</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@600&display=swap');
   @media print {
     @page { size: 80mm auto; margin: 3mm 2mm; }
     html, body { overflow-x: hidden; }
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace !important; font-size: 12px; font-weight: 700; color: #000; }
-  body {
-    font-family: 'Courier New', monospace;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body, body * {
+    font-family: 'Noto Sans Tamil', 'Nirmala UI', 'Latha', sans-serif !important;
     font-size: 12px;
-    line-height: 1.5;
-    font-weight: 700;
+    font-weight: 600;
     color: #000;
+    line-height: 1.5;
+  }
+  body {
     background: #fff;
     width: 76mm;
     margin: 0 auto;
     padding: 2mm 0;
   }
   table { border-collapse: collapse; width: 100%; }
-  th, td { font-size: 12px; font-weight: 700; }
-  img { max-width: 160px; max-height: 80px; display: block; margin: 0 auto; object-fit: contain; }
-  .relative { position: relative; }
-  .w-40 { width: 160px; }
-  .h-20 { height: 80px; }
-  .overflow-hidden { overflow: hidden; }
-  .mx-auto { margin-left: auto; margin-right: auto; }
-  .object-contain { object-fit: contain; }
+  /* Fix Next.js Image: remove absolute positioning, show as normal block */
+  img {
+    position: static !important;
+    max-width: 160px !important;
+    max-height: 80px !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+  }
+  /* Kill Next.js Image wrapper spans */
+  span[style*="position"] { display: contents !important; }
+  /* Ensure logo container has proper height */
+  .relative, [style*="position: relative"] {
+    position: relative;
+    width: 160px;
+    height: 80px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
@@ -216,7 +232,7 @@ ${content}
 
     printWindow.document.close();
 
-    // Fix images: convert Next.js Image srcset to simple img src
+    // Fix images: convert Next.js Image to simple img, remove absolute positioning
     const images = printWindow.document.querySelectorAll('img');
     images.forEach((img) => {
       const src = img.getAttribute('src') || img.getAttribute('srcset')?.split(' ')[0] || '';
@@ -224,8 +240,11 @@ ${content}
         img.setAttribute('src', src);
         img.removeAttribute('srcset');
         img.removeAttribute('sizes');
+        img.style.position = 'static';
         img.style.maxWidth = '160px';
         img.style.maxHeight = '80px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
         img.style.objectFit = 'contain';
         img.style.margin = '0 auto';
         img.style.display = 'block';
@@ -556,8 +575,22 @@ ${content}
           <div className="bg-gray-100 px-4 py-2 border-b">
             <p className="text-xs text-gray-600 text-center">Thermal Print Preview (80mm)</p>
           </div>
-          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", lineHeight: "1.5", fontWeight: 700, color: "#000" }}>
+          <div className="p-4 max-h-[500px] overflow-y-auto">
             <div ref={printRef}>
+              {/* Force uniform font across ALL elements — Tamil + English same font */}
+              <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@600&display=swap');
+                .thermal-receipt, .thermal-receipt * {
+                  font-family: 'Noto Sans Tamil', 'Nirmala UI', 'Latha', sans-serif !important;
+                  font-size: 12px !important;
+                  font-weight: 600 !important;
+                  color: #000 !important;
+                  line-height: 1.5 !important;
+                }
+                .thermal-receipt table { border-collapse: collapse !important; }
+                .thermal-receipt img { font-size: 0 !important; font-weight: normal !important; }
+              `}</style>
+              <div className="thermal-receipt">
               {/* Invoice Header */}
               <div style={{ textAlign: "center", borderBottom: "2px dashed #000", paddingBottom: "10px", marginBottom: "10px" }}>
                 {companySettings?.logoUrl && (
@@ -775,13 +808,14 @@ ${content}
               </div>
 
               {/* Footer */}
-              <div style={{ textAlign: "center", marginTop: "12px", paddingTop: "10px", borderTop: "2px dashed #000", fontSize: "12px", fontWeight: 700 }}>
+              <div style={{ textAlign: "center", marginTop: "12px", paddingTop: "10px", borderTop: "2px dashed #000" }}>
                 <p style={{ marginBottom: "4px" }}>Thank You, Please Come Again!</p>
                 {companySettings?.companyName && (
                   <p>{companySettings.companyName}</p>
                 )}
               </div>
-            </div>
+              </div>{/* end thermal-receipt */}
+            </div>{/* end printRef */}
           </div>
         </div>
 
