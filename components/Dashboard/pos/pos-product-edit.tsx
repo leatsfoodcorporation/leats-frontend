@@ -928,11 +928,12 @@ export const PosProductEdit: React.FC<PosProductEditProps> = ({
                 id="lowStockAlertLevel"
                 type="number"
                 min="0"
+                step="any"
                 value={formData.lowStockAlertLevel}
                 onChange={(e) =>
                   handleChange(
                     "lowStockAlertLevel",
-                    parseInt(e.target.value) || 0
+                    parseFloat(e.target.value) || 0
                   )
                 }
                 placeholder="0"

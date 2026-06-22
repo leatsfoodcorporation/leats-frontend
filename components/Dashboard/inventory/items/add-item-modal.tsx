@@ -271,13 +271,13 @@ export default function AddItemModal({
     }
     
     // 🆕 Opening stock is required for both regular and processing items
-    if (!formData.openingStock || parseInt(formData.openingStock) < 0) {
+    if (!formData.openingStock || parseFloat(formData.openingStock) < 0) {
       newErrors.openingStock = "Valid opening stock is required";
     }
-    
+
     // 🆕 Low stock alert only for regular items
     if (formData.itemType === "regular") {
-      if (!formData.lowStockAlertLevel || parseInt(formData.lowStockAlertLevel) < 0) {
+      if (!formData.lowStockAlertLevel || parseFloat(formData.lowStockAlertLevel) < 0) {
         newErrors.lowStockAlertLevel = "Valid low stock alert level is required";
       }
     }
@@ -998,6 +998,7 @@ export default function AddItemModal({
                 id="openingStock"
                 type="number"
                 min="0"
+                step="any"
                 value={formData.openingStock}
                 onChange={(e) => handleInputChange("openingStock", e.target.value)}
                 placeholder="0"
@@ -1023,6 +1024,7 @@ export default function AddItemModal({
                   id="lowStockAlertLevel"
                   type="number"
                   min="0"
+                  step="any"
                   value={formData.lowStockAlertLevel}
                   onChange={(e) => handleInputChange("lowStockAlertLevel", e.target.value)}
                   placeholder="0"

@@ -67,7 +67,7 @@ export function InventoryTab({ formData, onChange }: InventoryTabProps) {
             type="number"
             min="0"
             value={formData.totalStockQuantity}
-            onChange={(e) => onChange("totalStockQuantity", parseInt(e.target.value) || 0)}
+            onChange={(e) => onChange("totalStockQuantity", parseFloat(e.target.value) || 0)}
             placeholder="Enter total stock"
             className="mt-2"
             disabled={formData.enableVariants && formData.variants.length > 0}
@@ -87,7 +87,7 @@ export function InventoryTab({ formData, onChange }: InventoryTabProps) {
             type="number"
             min="0"
             value={formData.lowStockAlertLevel}
-            onChange={(e) => onChange("lowStockAlertLevel", parseInt(e.target.value) || 0)}
+            onChange={(e) => onChange("lowStockAlertLevel", parseFloat(e.target.value) || 0)}
             placeholder="Auto-filled from inventory"
             className="mt-2"
             readOnly
