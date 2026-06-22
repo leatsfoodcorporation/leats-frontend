@@ -103,6 +103,11 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
 
   if (!order) return null;
 
+  const formatCurrency = (amount: number | undefined) => {
+    const value = amount ?? 0;
+    return `${currencySymbol}${value.toFixed(2)}`;
+  };
+
   const formatThermalCurrency = (amount: number | undefined) => {
     const value = amount ?? 0;
     return value.toFixed(2);
@@ -163,203 +168,88 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
   };
 
   const handlePrint = async () => {
+    if (!printRef.current) return;
+
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    const thermalLogoUrl = getThermalLogoUrl();
 
-    const DASH = '------------------------------------------------';
-    const DOUBLE_DASH = '================================================';
-
-    const deliveryAddressText = order.deliveryAddress ? `
-      <div class="row"><span>Delivery To</span><span>${order.deliveryAddress.name || order.customerName}</span></div>
-      <div class="addr">${order.deliveryAddress.addressLine1 || ''}${order.deliveryAddress.addressLine2 ? ', ' + order.deliveryAddress.addressLine2 : ''}</div>
-      <div class="addr">${order.deliveryAddress.city || ''}, ${order.deliveryAddress.state || ''} - ${order.deliveryAddress.pincode || ''}</div>
-    ` : '';
-
-    const itemRowsHtml = order.items.map(item => {
-      const name = item.displayName || item.variantName || item.productName;
-      const qty = item.quantity;
-      const rate = formatThermalCurrency(item.unitPrice);
-      const total = formatThermalCurrency(item.totalPrice || item.total);
-      const cutting = item.selectedCuttingStyle ? `<div class="item-sub">  Cutting: ${item.selectedCuttingStyle}</div>` : '';
-      return `<div class="item-row">
-        <div class="item-name">${name}${cutting}</div>
-        <div class="item-detail"><span>${qty} x ${rate}</span><span>${total}</span></div>
-      </div>`;
-    }).join('');
-
-    // GST rows
-    let gstRowsHtml = '';
-    if (order.gstType === 'cgst_sgst') {
-      const breakdown = getCgstSgstRateBreakdown(order);
-      if (breakdown.length > 0) {
-        breakdown.forEach(entry => {
-          gstRowsHtml += `<div class="row"><span>CGST @ ${formatGstRateLabel(entry.rate)}</span><span>${formatThermalCurrency(entry.cgst)}</span></div>`;
-          gstRowsHtml += `<div class="row"><span>SGST @ ${formatGstRateLabel(entry.rate)}</span><span>${formatThermalCurrency(entry.sgst)}</span></div>`;
-        });
-      } else {
-        if ((order.cgstAmount || 0) > 0) gstRowsHtml += `<div class="row"><span>CGST</span><span>${formatThermalCurrency(order.cgstAmount)}</span></div>`;
-        if ((order.sgstAmount || 0) > 0) gstRowsHtml += `<div class="row"><span>SGST</span><span>${formatThermalCurrency(order.sgstAmount)}</span></div>`;
-      }
-    } else if ((order.igstAmount || 0) > 0) {
-      gstRowsHtml += `<div class="row"><span>IGST</span><span>${formatThermalCurrency(order.igstAmount)}</span></div>`;
-    }
-    if (!order.gstType && (order.tax || 0) > 0) {
-      gstRowsHtml += `<div class="row"><span>Tax (GST)</span><span>${formatThermalCurrency(order.tax)}</span></div>`;
-    }
+    // Clone the exact modal content
+    const content = printRef.current.innerHTML;
 
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8"/>
 <title>Invoice ${order.invoiceNumber || order.orderNumber}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @media print {
-    @page { size: 80mm auto; margin: 2mm 3mm; }
+    @page { size: 80mm auto; margin: 3mm 2mm; }
     html, body { overflow-x: hidden; }
-    body { margin: 0; padding: 0; }
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace !important; font-size: 12px; font-weight: 700; color: #000; }
   body {
-    font-family: 'Roboto Mono', 'Lucida Console', 'Consolas', monospace;
-    font-size: 11px;
-    line-height: 1.3;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 700;
     color: #000;
     background: #fff;
-    width: 72mm;
+    width: 76mm;
     margin: 0 auto;
     padding: 2mm 0;
-    -webkit-font-smoothing: none;
-    text-rendering: optimizeSpeed;
-    letter-spacing: -0.3px;
   }
-  .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .dash { overflow: hidden; white-space: nowrap; font-size: 11px; line-height: 1; margin: 3px 0; color: #000; }
-  .double-dash { overflow: hidden; white-space: nowrap; font-size: 11px; line-height: 1; margin: 3px 0; color: #000; }
-  .header { text-align: center; margin-bottom: 2px; }
-  .header .company { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; margin: 3px 0; }
-  .header .info { font-size: 9px; line-height: 1.3; }
-  .header .gstin { font-size: 9px; margin-top: 2px; }
-  .section { margin: 1px 0; }
-  .row { display: flex; justify-content: space-between; font-size: 10px; line-height: 1.5; }
-  .addr { font-size: 9px; line-height: 1.3; padding-left: 2px; }
-  .item-row { margin: 2px 0; }
-  .item-name { font-size: 10px; font-weight: bold; }
-  .item-sub { font-size: 9px; font-weight: normal; }
-  .item-detail { display: flex; justify-content: space-between; font-size: 10px; }
-  .totals .row { font-size: 10px; }
-  .grand-total { font-size: 12px; font-weight: bold; margin-top: 3px; padding-top: 3px; display: flex; justify-content: space-between; }
-  .footer { text-align: center; font-size: 9px; margin-top: 2px; }
-  .footer .thanks { font-size: 10px; font-weight: bold; margin: 3px 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { font-size: 12px; font-weight: 700; }
+  img { max-width: 160px; max-height: 80px; display: block; margin: 0 auto; object-fit: contain; }
+  .relative { position: relative; }
+  .w-40 { width: 160px; }
+  .h-20 { height: 80px; }
+  .overflow-hidden { overflow: hidden; }
+  .mx-auto { margin-left: auto; margin-right: auto; }
+  .object-contain { object-fit: contain; }
 </style>
 </head>
 <body>
-  <!-- Header -->
-  <div class="header">
-    ${companySettings?.logoUrl ? `
-      <div style="width: 100px; height: 40px; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center;">
-        <img id="thermal-logo" src="${thermalLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" crossorigin="anonymous" referrerpolicy="no-referrer"/>
-      </div>
-    ` : ''}
-    <div class="company">${companySettings?.companyName || 'LEATS'}</div>
-    ${companySettings?.address ? `<div class="info">${companySettings.address}</div>` : ''}
-    ${companySettings?.city ? `<div class="info">${companySettings.city}, ${companySettings?.state || ''} ${companySettings?.zipCode || ''}</div>` : ''}
-    ${companySettings?.phone ? `<div class="info">Ph: ${companySettings.phone}</div>` : ''}
-    ${companySettings?.gstNumber ? `<div class="gstin">GSTIN: ${companySettings.gstNumber}</div>` : ''}
-  </div>
-  <div class="dash">${DASH}</div>
-
-  <!-- Bill Info -->
-  <div class="section">
-    <div class="row"><span>Bill No</span><span class="bold">${order.invoiceNumber || order.orderNumber}</span></div>
-    <div class="row"><span>Order No</span><span>${order.orderNumber}</span></div>
-    <div class="row"><span>Date</span><span>${formatDate(order.createdAt)}</span></div>
-    <div class="row"><span>Time</span><span>${new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span></div>
-  </div>
-  <div class="dash">${DASH}</div>
-
-  <!-- Customer Info -->
-  <div class="section">
-    <div class="row"><span>Customer</span><span>${order.customerName}</span></div>
-    <div class="row"><span>Phone</span><span>${order.customerPhone || 'N/A'}</span></div>
-    ${deliveryAddressText}
-  </div>
-  <div class="double-dash">${DOUBLE_DASH}</div>
-
-  <!-- Items -->
-  <div class="section">
-    ${itemRowsHtml}
-  </div>
-  <div class="double-dash">${DOUBLE_DASH}</div>
-
-  <!-- Totals -->
-  <div class="totals">
-    <div class="row"><span>Sub Total</span><span>${formatThermalCurrency(order.subtotal)}</span></div>
-    ${(order.discount ?? 0) > 0 ? `<div class="row"><span>Discount</span><span>-${formatThermalCurrency(order.discount)}</span></div>` : ''}
-    ${(order.couponDiscount ?? 0) > 0 ? `<div class="row"><span>Coupon (${order.couponCode || ''})</span><span>-${formatThermalCurrency(order.couponDiscount)}</span></div>` : ''}
-    ${(order.shippingCharge ?? 0) > 0 ? `<div class="row"><span>Shipping</span><span>${formatThermalCurrency(order.shippingCharge)}</span></div>` : `<div class="row"><span>Shipping</span><span>FREE</span></div>`}
-    ${gstRowsHtml}
-    <div class="dash">${DASH}</div>
-    <div class="grand-total"><span>GRAND TOTAL</span><span>${currencySymbol}${formatThermalCurrency(order.total)}</span></div>
-    <div class="dash">${DASH}</div>
-  </div>
-
-  <!-- Payment -->
-  <div class="section">
-    <div class="row"><span>Payment</span><span class="bold">${order.paymentMethod.toUpperCase()}</span></div>
-    <div class="row"><span>Status</span><span class="bold">${order.paymentStatus.toUpperCase()}</span></div>
-  </div>
-  <div class="dash">${DASH}</div>
-
-  <!-- Footer -->
-  <div class="footer">
-    <div class="thanks">Thank You, Visit Again!</div>
-    <div>${companySettings?.companyName || 'LEATS'}</div>
-  </div>
+${content}
 </body>
 </html>`);
 
     printWindow.document.close();
 
-    const waitForLogo = async () => {
-      if (!thermalLogoUrl) return;
-      const logo = printWindow.document.getElementById("thermal-logo") as HTMLImageElement | null;
-      if (!logo || logo.complete) return;
-      await new Promise<void>((resolve) => {
-        let resolved = false;
-        const done = () => {
-          if (resolved) return;
-          resolved = true;
-          resolve();
-        };
-        logo.onload = done;
-        logo.onerror = done;
-        setTimeout(done, 1500);
-      });
-    };
-
-    await waitForLogo();
-
-    // Wait for Google Font (Roboto Mono) to load before printing
-    await new Promise<void>((resolve) => {
-      if (printWindow.document.fonts && printWindow.document.fonts.ready) {
-        printWindow.document.fonts.ready.then(() => resolve()).catch(() => resolve());
-      } else {
-        resolve();
+    // Fix images: convert Next.js Image srcset to simple img src
+    const images = printWindow.document.querySelectorAll('img');
+    images.forEach((img) => {
+      const src = img.getAttribute('src') || img.getAttribute('srcset')?.split(' ')[0] || '';
+      if (src) {
+        img.setAttribute('src', src);
+        img.removeAttribute('srcset');
+        img.removeAttribute('sizes');
+        img.style.maxWidth = '160px';
+        img.style.maxHeight = '80px';
+        img.style.objectFit = 'contain';
+        img.style.margin = '0 auto';
+        img.style.display = 'block';
       }
-      setTimeout(resolve, 2000); // Max 2s wait for font
+    });
+
+    // Wait for images to load
+    await new Promise<void>((resolve) => {
+      const imgs = printWindow.document.querySelectorAll('img');
+      let loaded = 0;
+      const total = imgs.length;
+      if (total === 0) { resolve(); return; }
+      const done = () => { loaded++; if (loaded >= total) resolve(); };
+      imgs.forEach((img) => {
+        if (img.complete) { done(); } else { img.onload = done; img.onerror = done; }
+      });
+      setTimeout(resolve, 2000);
     });
 
     printWindow.focus();
-
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 300);
+    }, 200);
   };
 
   const handleDownload = async () => {
@@ -661,80 +551,149 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
           </DialogTitle>
         </DialogHeader>
 
-        {/* Thermal Print Preview — matches print output exactly */}
+        {/* Thermal Print Preview */}
         <div className="bg-white border rounded-lg overflow-hidden">
           <div className="bg-gray-100 px-4 py-2 border-b">
             <p className="text-xs text-gray-600 text-center">Thermal Print Preview (80mm)</p>
           </div>
-          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Roboto Mono', 'Lucida Console', 'Consolas', monospace", fontSize: "11px", lineHeight: "1.3", letterSpacing: "-0.3px" }}>
+          <div className="p-4 max-h-[500px] overflow-y-auto" style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", lineHeight: "1.5", fontWeight: 700, color: "#000" }}>
             <div ref={printRef}>
-              {/* Header */}
-              <div className="text-center mb-1">
+              {/* Invoice Header */}
+              <div style={{ textAlign: "center", borderBottom: "2px dashed #000", paddingBottom: "10px", marginBottom: "10px" }}>
                 {companySettings?.logoUrl && (
-                  <div className="relative w-24 h-10 flex items-center justify-center overflow-hidden mx-auto mb-1">
-                    <Image src={companySettings.logoUrl} alt="Logo" fill sizes="96px" className="object-contain" priority quality={90} />
+                  <div className="relative w-40 h-20 flex items-center justify-center overflow-hidden mx-auto">
+                    <Image
+                      src={companySettings.logoUrl}
+                      alt="Company Logo"
+                      fill
+                      sizes="160px"
+                      className="object-contain"
+                      priority={true}
+                      quality={90}
+                    />
                   </div>
                 )}
-                <div className="text-[13px] font-bold tracking-wide">{companySettings?.companyName || 'LEATS'}</div>
-                {companySettings?.address && <div className="text-[9px]">{companySettings.address}</div>}
-                {companySettings?.city && <div className="text-[9px]">{companySettings.city}, {companySettings?.state} {companySettings?.zipCode}</div>}
-                {companySettings?.phone && <div className="text-[9px]">Ph: {companySettings.phone}</div>}
-                {companySettings?.gstNumber && <div className="text-[9px]">GSTIN: {companySettings.gstNumber}</div>}
+                {companySettings?.companyName && (
+                  <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "4px" }}>{companySettings.companyName}</div>
+                )}
+                {companySettings?.address && (
+                  <div style={{ fontSize: "12px", fontWeight: 700 }}>{companySettings.address}</div>
+                )}
+                {(companySettings?.city || companySettings?.state) && (
+                  <div style={{ fontSize: "12px", fontWeight: 700 }}>{companySettings.city}{companySettings.state ? `, ${companySettings.state}` : ''} {companySettings.zipCode || ''}</div>
+                )}
+                {companySettings?.phone && (
+                  <div style={{ fontSize: "12px", fontWeight: 700 }}>Ph: {companySettings.phone}</div>
+                )}
+                {companySettings?.gstNumber && (
+                  <div style={{ fontSize: "12px", fontWeight: 700 }}>GSTIN: {companySettings.gstNumber}</div>
+                )}
               </div>
-              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
 
-              {/* Bill Info */}
-              <div className="space-y-0.5">
-                <div className="flex justify-between text-[10px]"><span>Bill No</span><span className="font-bold">{order.invoiceNumber || order.orderNumber}</span></div>
-                <div className="flex justify-between text-[10px]"><span>Order No</span><span>{order.orderNumber}</span></div>
-                <div className="flex justify-between text-[10px]"><span>Date</span><span>{formatDate(order.createdAt)}</span></div>
-                <div className="flex justify-between text-[10px]"><span>Time</span><span>{new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span></div>
-              </div>
-              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
-
-              {/* Customer Info */}
-              <div className="space-y-0.5">
-                <div className="flex justify-between text-[10px]"><span>Customer</span><span>{order.customerName}</span></div>
-                <div className="flex justify-between text-[10px]"><span>Phone</span><span>{order.customerPhone || 'N/A'}</span></div>
+              {/* Invoice Info */}
+              <div style={{ marginBottom: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Invoice No:</span>
+                  <span>{order.invoiceNumber || order.orderNumber}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Order No:</span>
+                  <span>{order.orderNumber}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Date:</span>
+                  <span>{formatDate(order.createdAt)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Time:</span>
+                  <span>{new Date(order.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }}></div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Customer:</span>
+                  <span>{order.customerName}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Phone:</span>
+                  <span>{order.customerPhone}</span>
+                </div>
                 {order.deliveryAddress && (
                   <>
-                    <div className="flex justify-between text-[10px]"><span>Delivery To</span><span>{order.deliveryAddress.name || order.customerName}</span></div>
-                    <div className="text-[9px] leading-tight">
-                      <div>{order.deliveryAddress.addressLine1}{order.deliveryAddress.addressLine2 ? `, ${order.deliveryAddress.addressLine2}` : ''}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                      <span>Delivery:</span>
+                      <span>{order.deliveryAddress.name || order.customerName}</span>
+                    </div>
+                    <div style={{ fontSize: "12px", fontWeight: 700, marginTop: "2px" }}>
+                      <div>{order.deliveryAddress.addressLine1}</div>
+                      {order.deliveryAddress.addressLine2 && (
+                        <div>{order.deliveryAddress.addressLine2}</div>
+                      )}
                       <div>{order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</div>
                     </div>
                   </>
                 )}
               </div>
-              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">================================================</div>
 
-              {/* Items */}
-              <div className="space-y-1">
-                {order.items.map((item, index) => (
-                  <div key={`item-${index}`}>
-                    <div className="text-[10px] font-bold break-words">
-                      {item.displayName || item.variantName || item.productName}
-                      {item.selectedCuttingStyle && <div className="font-normal text-[9px]">&nbsp;&nbsp;Cutting: {item.selectedCuttingStyle}</div>}
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span>{item.quantity} x {formatThermalCurrency(item.unitPrice)}</span>
-                      <span>{formatThermalCurrency(item.totalPrice || item.total)}</span>
-                    </div>
-                  </div>
-                ))}
+              {/* Items Table */}
+              <div style={{ borderTop: "2px dashed #000", borderBottom: "2px dashed #000", padding: "6px 0", margin: "10px 0" }}>
+                <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse", fontSize: "12px", fontWeight: 700 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px dashed #000" }}>
+                      <th style={{ textAlign: "left", fontWeight: 700, paddingBottom: "4px", width: "40%" }}>Item</th>
+                      <th style={{ textAlign: "center", fontWeight: 700, paddingBottom: "4px", width: "14%" }}>Qty</th>
+                      <th style={{ textAlign: "right", fontWeight: 700, paddingBottom: "4px", width: "20%" }}>Price</th>
+                      <th style={{ textAlign: "right", fontWeight: 700, paddingBottom: "4px", width: "26%" }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item, index) => {
+                      return (
+                        <Fragment key={`item-${index}`}>
+                          <tr>
+                            <td style={{ verticalAlign: "top", padding: "2px 4px 2px 0", wordBreak: "break-word", fontWeight: 700 }}>{item.displayName || item.variantName || item.productName}</td>
+                            <td style={{ verticalAlign: "top", padding: "2px 0", textAlign: "center", whiteSpace: "nowrap", fontWeight: 700 }}>{formatOrderItemQuantity(item.quantity, item.variantUom, item.variantUomValue)}</td>
+                            <td style={{ verticalAlign: "top", padding: "2px 0", textAlign: "right", whiteSpace: "nowrap", fontWeight: 700 }}>{formatCurrency(item.unitPrice)}</td>
+                            <td style={{ verticalAlign: "top", padding: "2px 0", textAlign: "right", whiteSpace: "nowrap", fontWeight: 700 }}>{formatCurrency(item.totalPrice || item.total)}</td>
+                          </tr>
+                          {item.selectedCuttingStyle && (
+                            <tr>
+                              <td colSpan={4} style={{ fontSize: "12px", fontWeight: 700, paddingBottom: "2px" }}>Cutting: {item.selectedCuttingStyle}</td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">================================================</div>
 
               {/* Totals */}
-              <div className="space-y-0.5">
-                <div className="flex justify-between text-[10px]"><span>Sub Total</span><span>{formatThermalCurrency(order.subtotal)}</span></div>
+              <div style={{ marginTop: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(order.subtotal)}</span>
+                </div>
                 {(order.discount ?? 0) > 0 && (
-                  <div className="flex justify-between text-[10px]"><span>Discount</span><span>-{formatThermalCurrency(order.discount)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                    <span>Discount:</span>
+                    <span>-{formatCurrency(order.discount)}</span>
+                  </div>
                 )}
                 {(order.couponDiscount ?? 0) > 0 && (
-                  <div className="flex justify-between text-[10px]"><span>Coupon ({order.couponCode || ''})</span><span>-{formatThermalCurrency(order.couponDiscount)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                    <span>Coupon Discount:</span>
+                    <span>-{formatCurrency(order.couponDiscount)}</span>
+                  </div>
                 )}
-                <div className="flex justify-between text-[10px]"><span>Shipping</span><span>{(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatThermalCurrency(order.shippingCharge)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Shipping:</span>
+                  <span>{(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatCurrency(order.shippingCharge)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>GST%:</span>
+                  <span>{getGstPercentageText(order)}</span>
+                </div>
+
                 {/* GST Breakdown */}
                 {order.gstType === 'cgst_sgst' ? (
                   <>
@@ -742,45 +701,85 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
                       const breakdown = getCgstSgstRateBreakdown(order);
                       if (breakdown.length > 0) {
                         return breakdown.map((entry) => (
-                          <Fragment key={`gst-${entry.rate}`}>
-                            <div className="flex justify-between text-[10px]"><span>CGST @ {formatGstRateLabel(entry.rate)}</span><span>{formatThermalCurrency(entry.cgst)}</span></div>
-                            <div className="flex justify-between text-[10px]"><span>SGST @ {formatGstRateLabel(entry.rate)}</span><span>{formatThermalCurrency(entry.sgst)}</span></div>
+                          <Fragment key={`gst-split-${entry.rate}`}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                              <span>CGST {formatGstRateLabel(entry.rate)}:</span>
+                              <span>{formatCurrency(entry.cgst)}</span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                              <span>SGST {formatGstRateLabel(entry.rate)}:</span>
+                              <span>{formatCurrency(entry.sgst)}</span>
+                            </div>
                           </Fragment>
                         ));
                       }
                       return (
                         <>
-                          {(order.cgstAmount || 0) > 0 && <div className="flex justify-between text-[10px]"><span>CGST</span><span>{formatThermalCurrency(order.cgstAmount)}</span></div>}
-                          {(order.sgstAmount || 0) > 0 && <div className="flex justify-between text-[10px]"><span>SGST</span><span>{formatThermalCurrency(order.sgstAmount)}</span></div>}
+                          {(order.cgstAmount || 0) > 0 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                              <span>CGST:</span>
+                              <span>{formatCurrency(order.cgstAmount)}</span>
+                            </div>
+                          )}
+                          {(order.sgstAmount || 0) > 0 && (
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                              <span>SGST:</span>
+                              <span>{formatCurrency(order.sgstAmount)}</span>
+                            </div>
+                          )}
                         </>
                       );
                     })()}
                   </>
-                ) : (order.igstAmount || 0) > 0 ? (
-                  <div className="flex justify-between text-[10px]"><span>IGST</span><span>{formatThermalCurrency(order.igstAmount)}</span></div>
-                ) : null}
-                {!order.gstType && (order.tax || 0) > 0 && (
-                  <div className="flex justify-between text-[10px]"><span>Tax (GST)</span><span>{formatThermalCurrency(order.tax)}</span></div>
+                ) : (
+                  <>
+                    {(order.igstAmount || 0) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                        <span>IGST:</span>
+                        <span>{formatCurrency(order.igstAmount)}</span>
+                      </div>
+                    )}
+                  </>
                 )}
-                <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
-                <div className="flex justify-between text-[12px] font-bold">
-                  <span>GRAND TOTAL</span>
-                  <span>{currencySymbol}{formatThermalCurrency(order.total)}</span>
+
+                {/* Fallback for orders without GST breakdown */}
+                {!order.gstType && (order.tax || 0) > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                    <span>Tax (GST):</span>
+                    <span>{formatCurrency(order.tax)}</span>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, borderTop: "2px solid #000", paddingTop: "6px", marginTop: "6px" }}>
+                  <span>FINAL TOTAL:</span>
+                  <span>{formatCurrency(order.total)}</span>
                 </div>
-                <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
               </div>
 
-              {/* Payment */}
-              <div className="space-y-0.5">
-                <div className="flex justify-between text-[10px]"><span>Payment</span><span className="font-bold uppercase">{order.paymentMethod}</span></div>
-                <div className="flex justify-between text-[10px]"><span>Status</span><span className="font-bold uppercase">{order.paymentStatus}</span></div>
+              {/* Payment Method */}
+              <div style={{ marginTop: "10px", borderTop: "1px dashed #000", paddingTop: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Payment:</span>
+                  <span style={{ textTransform: "uppercase" }}>{order.paymentMethod}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, margin: "3px 0" }}>
+                  <span>Status:</span>
+                  <span style={{
+                    textTransform: "uppercase",
+                    color: order.paymentStatus === 'completed' ? '#16a34a' :
+                           order.paymentStatus === 'pending' ? '#ca8a04' : '#dc2626'
+                  }}>
+                    {order.paymentStatus}
+                  </span>
+                </div>
               </div>
-              <div className="text-[11px] leading-none my-1 text-gray-800 overflow-hidden whitespace-nowrap">------------------------------------------------</div>
 
               {/* Footer */}
-              <div className="text-center">
-                <div className="text-[10px] font-bold">Thank You, Visit Again!</div>
-                <div className="text-[9px]">{companySettings?.companyName || 'LEATS'}</div>
+              <div style={{ textAlign: "center", marginTop: "12px", paddingTop: "10px", borderTop: "2px dashed #000", fontSize: "12px", fontWeight: 700 }}>
+                <p style={{ marginBottom: "4px" }}>Thank You, Please Come Again!</p>
+                {companySettings?.companyName && (
+                  <p>{companySettings.companyName}</p>
+                )}
               </div>
             </div>
           </div>

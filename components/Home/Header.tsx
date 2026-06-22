@@ -218,18 +218,9 @@ export default function Header({ initialCategories, initialWebSettings, initialP
               </Link>
             </div>
 
-            {/* Center - Promotional Offers */}
+            {/* Center - Live/Pre-Order Countdown Only */}
             <div className="text-center flex-1 overflow-hidden">
-              {isClient && promotionalOffers.length > 0 ? (
-                <p 
-                  key={currentOfferIndex}
-                  className="font-medium text-white animate-fade-in"
-                >
-                  {formatOfferText(promotionalOffers[currentOfferIndex])}
-                </p>
-              ) : (
-                <OrderCountdownBanner />
-              )}
+              <OrderCountdownBanner />
             </div>
           </div>
         </div>
