@@ -222,6 +222,17 @@ export default function PurchaseForm({
     propInitialRowCategories || {}
   );
 
+  // Convert quantity to base UOM for price calculation
+  // Price is always per base UOM (e.g., per KG). When user enters grams, convert to KG.
+  // conversionFactor = how many of this unit in 1 base unit (e.g., g→kg = 1000)
+  const getQuantityInBaseUom = (quantity: number, uom: string, itemId: string): number => {
+    const invItem = items.find(i => i.id === itemId);
+    if (!invItem?.availableUoms || invItem.availableUoms.length === 0) return quantity;
+    const uomConfig = (invItem.availableUoms as { uom: string; conversionFactor: number }[]).find(u => u.uom === uom);
+    if (!uomConfig || uomConfig.conversionFactor <= 0) return quantity;
+    return quantity / uomConfig.conversionFactor;
+  };
+
   // Fetch PO number from backend
   const fetchPONumber = async (): Promise<string> => {
     try {
@@ -388,8 +399,9 @@ export default function PurchaseForm({
           const rate = item.gstPercentage;
           const halfRate = rate / 2;
 
-          // Recalculate GST amounts with new type
-          const itemTotal = item.quantity * item.price;
+          // Recalculate GST amounts with new type (convert quantity to base UOM)
+          const baseQty = getQuantityInBaseUom(item.quantity, item.uom, item.itemId || '');
+          const itemTotal = baseQty * item.price;
           const cgstAmount =
             gstType === "cgst_sgst" ? (itemTotal * halfRate) / 100 : 0;
           const sgstAmount =
@@ -544,8 +556,9 @@ export default function PurchaseForm({
               (gstRate) => gstRate.gstPercentage === selectedItem.gstPercentage
             );
 
-            // Calculate GST amounts immediately
-            const itemTotal = item.quantity * selectedItem.purchasePrice;
+            // Calculate GST amounts immediately (convert quantity to base UOM)
+            const baseQty = getQuantityInBaseUom(item.quantity, selectedItem.uom, itemId);
+            const itemTotal = baseQty * selectedItem.purchasePrice;
             const cgstAmount =
               gstType === "cgst_sgst" ? (itemTotal * halfRate) / 100 : 0;
             const sgstAmount =
@@ -612,13 +625,15 @@ export default function PurchaseForm({
           // Handle GST option change - this is now handled by the Select onValueChange
           // which directly updates the GST rate based on the selected percentage
 
-          // Recalculate amounts when quantity, price, or GST changes
+          // Recalculate amounts when quantity, price, UOM, or GST changes
           if (
             field === "quantity" ||
             field === "price" ||
+            field === "uom" ||
             field === "gstPercentage"
           ) {
-            const itemTotal = updated.quantity * updated.price;
+            const baseQty = getQuantityInBaseUom(updated.quantity, updated.uom, updated.itemId || '');
+            const itemTotal = baseQty * updated.price;
             updated.itemTotal = itemTotal;
 
             // Calculate GST amounts
@@ -641,12 +656,12 @@ export default function PurchaseForm({
 
   const calculateSummary = (data: PurchaseOrderData): PurchaseOrderData => {
     const subTotal = data.items.reduce(
-      (sum, item) => sum + item.quantity * item.price,
+      (sum, item) => sum + getQuantityInBaseUom(item.quantity, item.uom, item.itemId || '') * item.price,
       0
     );
 
     const totalQuantity = data.items.reduce(
-      (sum, item) => sum + item.quantity,
+      (sum, item) => sum + getQuantityInBaseUom(item.quantity, item.uom, item.itemId || ''),
       0
     );
 
@@ -1280,9 +1295,9 @@ export default function PurchaseForm({
                                       gstType === "igst" ? rate : 0,
                                   };
 
-                                  // Recalculate GST amounts
-                                  const itemTotal =
-                                    updated.quantity * updated.price;
+                                  // Recalculate GST amounts (convert to base UOM)
+                                  const baseQty = getQuantityInBaseUom(updated.quantity, updated.uom, updated.itemId || '');
+                                  const itemTotal = baseQty * updated.price;
                                   updated.itemTotal = itemTotal;
                                   updated.cgstAmount =
                                     (itemTotal * updated.cgstPercentage) / 100;
@@ -1483,9 +1498,9 @@ export default function PurchaseForm({
               </Label>
               <div className="flex items-center gap-1.5">
                 {(() => {
-                  // Recalculate from items (fresh calculation)
+                  // Recalculate from items (fresh calculation with UOM conversion)
                   const subTotal = formData.items.reduce(
-                    (sum, item) => sum + item.quantity * item.price,
+                    (sum, item) => sum + getQuantityInBaseUom(item.quantity, item.uom, item.itemId || '') * item.price,
                     0
                   );
 
