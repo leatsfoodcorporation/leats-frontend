@@ -172,335 +172,161 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
     if (!printWindow) return;
     const thermalLogoUrl = getThermalLogoUrl();
 
-    // Create proper thermal print HTML structure
-    const deliveryAddressHtml = order.deliveryAddress ? `
-      <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-        <span>Delivery:</span>
-        <span>${order.deliveryAddress.name || order.customerName}</span>
-      </div>
-      <div style="font-size: 10px; color: #333; margin: 2px 0;">
-        <div>${order.deliveryAddress.addressLine1}</div>
-        ${order.deliveryAddress.addressLine2 ? `<div>${order.deliveryAddress.addressLine2}</div>` : ''}
-        <div>${order.deliveryAddress.city}, ${order.deliveryAddress.state} - ${order.deliveryAddress.pincode}</div>
-      </div>
+    const DASH = '------------------------------------------------';
+    const DOUBLE_DASH = '================================================';
+
+    const deliveryAddressText = order.deliveryAddress ? `
+      <div class="row"><span>Delivery To</span><span>${order.deliveryAddress.name || order.customerName}</span></div>
+      <div class="addr">${order.deliveryAddress.addressLine1 || ''}${order.deliveryAddress.addressLine2 ? ', ' + order.deliveryAddress.addressLine2 : ''}</div>
+      <div class="addr">${order.deliveryAddress.city || ''}, ${order.deliveryAddress.state || ''} - ${order.deliveryAddress.pincode || ''}</div>
     ` : '';
 
     const itemRowsHtml = order.items.map(item => {
-      const qtyOnly = Number.isInteger(item.quantity) ? `${item.quantity}` : `${item.quantity}`;
-      const gstText = item.gstPercentage ? `${item.gstPercentage}%` : '-';
-      
-      return `
-      <tr>
-        <td class="item-cell">${item.displayName || item.variantName || item.productName}</td>
-        <td class="col-qty">${qtyOnly}</td>
-        <td class="col-price">${formatThermalCurrency(item.unitPrice)}</td>
-        <td class="col-gst">${gstText}</td>
-        <td class="col-total">${formatThermalCurrency(item.totalPrice || item.total)}</td>
-      </tr>
-      ${item.selectedCuttingStyle ? `
-      <tr><td colspan="5" class="item-note">Cutting: ${item.selectedCuttingStyle}</td></tr>
-      ` : ''}
-    `;
+      const name = item.displayName || item.variantName || item.productName;
+      const qty = item.quantity;
+      const rate = formatThermalCurrency(item.unitPrice);
+      const total = formatThermalCurrency(item.totalPrice || item.total);
+      const cutting = item.selectedCuttingStyle ? `<div class="item-sub">  Cutting: ${item.selectedCuttingStyle}</div>` : '';
+      return `<div class="item-row">
+        <div class="item-name">${name}${cutting}</div>
+        <div class="item-detail"><span>${qty} x ${rate}</span><span>${total}</span></div>
+      </div>`;
     }).join('');
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <title>Invoice ${order.invoiceNumber || order.orderNumber}</title>
-          <style>
-            * {
-              font-family: 'Courier New', 'Lucida Console', monospace !important;
-              font-weight: 400 !important;
-              font-style: normal !important;
-              color: #000 !important;
-            }
-            @media print {
-              @page {
-                size: 80mm auto;
-                margin: 4mm 2mm 4mm 2mm;
-              }
-              html, body {
-                overflow-x: hidden;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-              }
-            }
-            body {
-              font-family: 'Courier New', 'Lucida Console', monospace;
-              font-size: 12px;
-              line-height: 1.45;
-              font-weight: 500;
-              letter-spacing: 0.15px;
-              text-rendering: geometricPrecision;
-              color: #000;
-              background: #fff;
-              width: 76mm;
-              margin: 0 auto;
-              padding: 2mm 0 0 0;
-            }
-            .invoice-header {
-              text-align: center;
-              border-bottom: 2px dashed #000;
-              padding-bottom: 10px;
-              margin-bottom: 10px;
-              break-inside: avoid;
-            }
-            .invoice-header h1 {
-              font-size: 18px;
-              font-weight: bold;
-              margin: 0 0 5px 0;
-            }
-            .invoice-header p {
-              margin: 2px 0;
-              font-size: 11px;
-            }
-            .invoice-info {
-              margin-bottom: 10px;
-              font-size: 11px;
-            }
-            .invoice-info div {
-              display: flex;
-              justify-content: space-between;
-              margin: 2px 0;
-            }
-            .items-table {
-              width: 100%;
-              border-top: 1px dashed #000;
-              border-bottom: 1px dashed #000;
-              padding: 5px 0 3px;
-              margin: 10px 0;
-            }
-            .items-table table {
-              width: 76mm;
-              table-layout: fixed;
-              border-collapse: separate;
-              border-spacing: 0;
-            }
-            .items-table th,
-            .items-table td {
-              font-size: 11px;
-              padding: 1px 0.35mm;
-              vertical-align: top;
-            }
-            .items-table th {
-              border-bottom: 1px dashed #000;
-              padding-bottom: 3px;
-              white-space: nowrap;
-            }
-            .item-cell {
-              width: 36%;
-              word-break: break-word;
-              overflow-wrap: anywhere;
-            }
-            .col-qty { width: 12%; text-align: center; white-space: nowrap; }
-            .col-price { width: 15%; text-align: right; white-space: nowrap; }
-            .col-gst { width: 9%; text-align: right; white-space: nowrap; }
-            .col-total { width: 18%; text-align: right; white-space: nowrap; }
-            .col-total { font-weight: 600 !important; }
-            .item-note {
-              font-size: 10px;
-              padding: 0 2px 2px;
-            }
-            .totals {
-              margin-top: 10px;
-              border-top: 1px dashed #000;
-              padding-top: 5px;
-            }
-            .total-row {
-              display: flex;
-              justify-content: space-between;
-              margin: 3px 0;
-              font-size: 11px;
-            }
-            .total-row.grand-total {
-              font-size: 14px;
-              font-weight: bold;
-              border-top: 2px solid #000;
-              padding-top: 5px;
-              margin-top: 5px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 15px;
-              padding-top: 10px;
-              border-top: 2px dashed #000;
-              font-size: 10px;
-            }
-            .footer p {
-              margin: 3px 0;
-            }
-          </style>
-        </head>
-        <body>
-          <!-- Invoice Header -->
-          <div class="invoice-header">
-            ${companySettings?.logoUrl ? `
-              <div style="position: relative; width: 120px; height: 48px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center;">
-                <img 
-                  id="thermal-logo"
-                  src="${thermalLogoUrl}" 
-                  alt="Company Logo" 
-                  style="display:block; width: 100%; height: 100%; object-fit: contain; object-position: center;" 
-                  crossorigin="anonymous"
-                  referrerpolicy="no-referrer"
-                />
-              </div>
-            ` : ''}
-          </div>
+    // GST rows
+    let gstRowsHtml = '';
+    if (order.gstType === 'cgst_sgst') {
+      const breakdown = getCgstSgstRateBreakdown(order);
+      if (breakdown.length > 0) {
+        breakdown.forEach(entry => {
+          gstRowsHtml += `<div class="row"><span>CGST @ ${formatGstRateLabel(entry.rate)}</span><span>${formatThermalCurrency(entry.cgst)}</span></div>`;
+          gstRowsHtml += `<div class="row"><span>SGST @ ${formatGstRateLabel(entry.rate)}</span><span>${formatThermalCurrency(entry.sgst)}</span></div>`;
+        });
+      } else {
+        if ((order.cgstAmount || 0) > 0) gstRowsHtml += `<div class="row"><span>CGST</span><span>${formatThermalCurrency(order.cgstAmount)}</span></div>`;
+        if ((order.sgstAmount || 0) > 0) gstRowsHtml += `<div class="row"><span>SGST</span><span>${formatThermalCurrency(order.sgstAmount)}</span></div>`;
+      }
+    } else if ((order.igstAmount || 0) > 0) {
+      gstRowsHtml += `<div class="row"><span>IGST</span><span>${formatThermalCurrency(order.igstAmount)}</span></div>`;
+    }
+    if (!order.gstType && (order.tax || 0) > 0) {
+      gstRowsHtml += `<div class="row"><span>Tax (GST)</span><span>${formatThermalCurrency(order.tax)}</span></div>`;
+    }
 
-          <!-- Invoice Info -->
-          <div class="invoice-info">
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Invoice No:</span>
-              <span style="font-weight: bold;">${order.invoiceNumber || order.orderNumber}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Order No:</span>
-              <span>${order.orderNumber}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Date:</span>
-              <span>${formatDate(order.createdAt)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Time:</span>
-              <span>${new Date(order.createdAt).toLocaleTimeString()}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Customer:</span>
-              <span>${order.customerName}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Phone:</span>
-              <span>${order.customerPhone}</span>
-            </div>
-            ${deliveryAddressHtml}
-          </div>
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Invoice ${order.invoiceNumber || order.orderNumber}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @media print {
+    @page { size: 80mm auto; margin: 2mm 3mm; }
+    html, body { overflow-x: hidden; }
+    body { margin: 0; padding: 0; }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Roboto Mono', 'Lucida Console', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    color: #000;
+    background: #fff;
+    width: 72mm;
+    margin: 0 auto;
+    padding: 2mm 0;
+    -webkit-font-smoothing: none;
+    text-rendering: optimizeSpeed;
+    letter-spacing: -0.3px;
+  }
+  .center { text-align: center; }
+  .bold { font-weight: bold; }
+  .dash { overflow: hidden; white-space: nowrap; font-size: 11px; line-height: 1; margin: 3px 0; color: #000; }
+  .double-dash { overflow: hidden; white-space: nowrap; font-size: 11px; line-height: 1; margin: 3px 0; color: #000; }
+  .header { text-align: center; margin-bottom: 2px; }
+  .header .company { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; margin: 3px 0; }
+  .header .info { font-size: 9px; line-height: 1.3; }
+  .header .gstin { font-size: 9px; margin-top: 2px; }
+  .section { margin: 1px 0; }
+  .row { display: flex; justify-content: space-between; font-size: 10px; line-height: 1.5; }
+  .addr { font-size: 9px; line-height: 1.3; padding-left: 2px; }
+  .item-row { margin: 2px 0; }
+  .item-name { font-size: 10px; font-weight: bold; }
+  .item-sub { font-size: 9px; font-weight: normal; }
+  .item-detail { display: flex; justify-content: space-between; font-size: 10px; }
+  .totals .row { font-size: 10px; }
+  .grand-total { font-size: 12px; font-weight: bold; margin-top: 3px; padding-top: 3px; display: flex; justify-content: space-between; }
+  .footer { text-align: center; font-size: 9px; margin-top: 2px; }
+  .footer .thanks { font-size: 10px; font-weight: bold; margin: 3px 0; }
+</style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    ${companySettings?.logoUrl ? `
+      <div style="width: 100px; height: 40px; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center;">
+        <img id="thermal-logo" src="${thermalLogoUrl}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+      </div>
+    ` : ''}
+    <div class="company">${companySettings?.companyName || 'LEATS'}</div>
+    ${companySettings?.address ? `<div class="info">${companySettings.address}</div>` : ''}
+    ${companySettings?.city ? `<div class="info">${companySettings.city}, ${companySettings?.state || ''} ${companySettings?.zipCode || ''}</div>` : ''}
+    ${companySettings?.phone ? `<div class="info">Ph: ${companySettings.phone}</div>` : ''}
+    ${companySettings?.gstNumber ? `<div class="gstin">GSTIN: ${companySettings.gstNumber}</div>` : ''}
+  </div>
+  <div class="dash">${DASH}</div>
 
-          <!-- Items Table -->
-          <div class="items-table">
-            <table>
-              <thead>
-                <tr>
-                  <th style="text-align:left;" class="item-cell">Item</th>
-                  <th class="col-qty">Qty</th>
-                  <th class="col-price">Price</th>
-                  <th class="col-gst">GST</th>
-                  <th class="col-total">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemRowsHtml}
-              </tbody>
-            </table>
-          </div>
+  <!-- Bill Info -->
+  <div class="section">
+    <div class="row"><span>Bill No</span><span class="bold">${order.invoiceNumber || order.orderNumber}</span></div>
+    <div class="row"><span>Order No</span><span>${order.orderNumber}</span></div>
+    <div class="row"><span>Date</span><span>${formatDate(order.createdAt)}</span></div>
+    <div class="row"><span>Time</span><span>${new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span></div>
+  </div>
+  <div class="dash">${DASH}</div>
 
-          <!-- Totals -->
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal:</span>
-              <span>${formatThermalCurrency(order.subtotal)}</span>
-            </div>
-            ${(order.discount ?? 0) > 0 ? `
-              <div class="total-row" style="color: #16a34a;">
-                <span>Discount:</span>
-                <span>-${formatThermalCurrency(order.discount)}</span>
-              </div>
-            ` : ''}
-            ${(order.couponDiscount ?? 0) > 0 ? `
-              <div class="total-row" style="color: #16a34a;">
-                <span>Coupon Discount:</span>
-                <span>-${formatThermalCurrency(order.couponDiscount)}</span>
-              </div>
-            ` : ''}
-            <div class="total-row">
-              <span>Shipping:</span>
-              <span>${(order.shippingCharge ?? 0) === 0 ? 'FREE' : formatThermalCurrency(order.shippingCharge)}</span>
-            </div>
-            <div class="total-row">
-              <span>GST%:</span>
-              <span>${getGstPercentageText(order)}</span>
-            </div>
-            
-            ${order.gstType === 'cgst_sgst' ? `
-              ${(() => {
-                const breakdown = getCgstSgstRateBreakdown(order);
-                if (breakdown.length > 0) {
-                  return breakdown.map((entry) => `
-                    <div class="total-row">
-                      <span>CGST ${formatGstRateLabel(entry.rate)}:</span>
-                      <span>${formatThermalCurrency(entry.cgst)}</span>
-                    </div>
-                    <div class="total-row">
-                      <span>SGST ${formatGstRateLabel(entry.rate)}:</span>
-                      <span>${formatThermalCurrency(entry.sgst)}</span>
-                    </div>
-                  `).join('');
-                }
-                return `
-                  ${(order.cgstAmount || 0) > 0 ? `
-                    <div class="total-row">
-                      <span>CGST:</span>
-                      <span>${formatThermalCurrency(order.cgstAmount)}</span>
-                    </div>
-                  ` : ''}
-                  ${(order.sgstAmount || 0) > 0 ? `
-                    <div class="total-row">
-                      <span>SGST:</span>
-                      <span>${formatThermalCurrency(order.sgstAmount)}</span>
-                    </div>
-                  ` : ''}
-                `;
-              })()}
-            ` : `
-              ${(order.igstAmount || 0) > 0 ? `
-                <div class="total-row">
-                  <span>IGST:</span>
-                  <span>${formatThermalCurrency(order.igstAmount)}</span>
-                </div>
-              ` : ''}
-            `}
-            
-            ${!order.gstType && (order.tax || 0) > 0 ? `
-              <div class="total-row">
-                <span>Tax (GST):</span>
-                <span>${formatThermalCurrency(order.tax)}</span>
-              </div>
-            ` : ''}
-            
-            <div class="total-row grand-total">
-              <span>FINAL TOTAL:</span>
-              <span>${formatThermalCurrency(order.total)}</span>
-            </div>
-          </div>
+  <!-- Customer Info -->
+  <div class="section">
+    <div class="row"><span>Customer</span><span>${order.customerName}</span></div>
+    <div class="row"><span>Phone</span><span>${order.customerPhone || 'N/A'}</span></div>
+    ${deliveryAddressText}
+  </div>
+  <div class="double-dash">${DOUBLE_DASH}</div>
 
-          <!-- Payment Method -->
-          <div style="margin-top: 10px; font-size: 11px;">
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Payment:</span>
-              <span style="font-weight: bold; text-transform: uppercase;">${order.paymentMethod}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-              <span>Status:</span>
-              <span style="font-weight: bold; text-transform: uppercase; color: ${
-                order.paymentStatus === 'completed' ? '#16a34a' : 
-                order.paymentStatus === 'pending' ? '#ca8a04' : '#dc2626'
-              };">${order.paymentStatus}</span>
-            </div>
-          </div>
+  <!-- Items -->
+  <div class="section">
+    ${itemRowsHtml}
+  </div>
+  <div class="double-dash">${DOUBLE_DASH}</div>
 
-          <!-- Footer -->
-          <div class="footer">
-            <p style="font-weight: bold; margin: 3px 0;">Thank You, Please Come Again!</p>
-            <p style="margin: 3px 0;">${companySettings?.companyName || 'LEATS'}</p>
-          </div>
-        </body>
-      </html>
-    `);
+  <!-- Totals -->
+  <div class="totals">
+    <div class="row"><span>Sub Total</span><span>${formatThermalCurrency(order.subtotal)}</span></div>
+    ${(order.discount ?? 0) > 0 ? `<div class="row"><span>Discount</span><span>-${formatThermalCurrency(order.discount)}</span></div>` : ''}
+    ${(order.couponDiscount ?? 0) > 0 ? `<div class="row"><span>Coupon (${order.couponCode || ''})</span><span>-${formatThermalCurrency(order.couponDiscount)}</span></div>` : ''}
+    ${(order.shippingCharge ?? 0) > 0 ? `<div class="row"><span>Shipping</span><span>${formatThermalCurrency(order.shippingCharge)}</span></div>` : `<div class="row"><span>Shipping</span><span>FREE</span></div>`}
+    ${gstRowsHtml}
+    <div class="dash">${DASH}</div>
+    <div class="grand-total"><span>GRAND TOTAL</span><span>${currencySymbol}${formatThermalCurrency(order.total)}</span></div>
+    <div class="dash">${DASH}</div>
+  </div>
+
+  <!-- Payment -->
+  <div class="section">
+    <div class="row"><span>Payment</span><span class="bold">${order.paymentMethod.toUpperCase()}</span></div>
+    <div class="row"><span>Status</span><span class="bold">${order.paymentStatus.toUpperCase()}</span></div>
+  </div>
+  <div class="dash">${DASH}</div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="thanks">Thank You, Visit Again!</div>
+    <div>${companySettings?.companyName || 'LEATS'}</div>
+  </div>
+</body>
+</html>`);
 
     printWindow.document.close();
 
@@ -522,12 +348,23 @@ export function InvoiceView({ order, companySettings, isOpen, onClose }: Invoice
     };
 
     await waitForLogo();
+
+    // Wait for Google Font (Roboto Mono) to load before printing
+    await new Promise<void>((resolve) => {
+      if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+        printWindow.document.fonts.ready.then(() => resolve()).catch(() => resolve());
+      } else {
+        resolve();
+      }
+      setTimeout(resolve, 2000); // Max 2s wait for font
+    });
+
     printWindow.focus();
 
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 150);
+    }, 300);
   };
 
   const handleDownload = async () => {
