@@ -148,9 +148,23 @@ export function OrderCountdownBanner() {
 
   if (messages.length === 0) return null;
 
+  // Show all messages — stack on mobile, side-by-side on desktop
+  if (messages.length > 1) {
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-6 md:gap-10 text-white w-full">
+        {messages.map((msg, i) => (
+          <p key={i} className="font-semibold text-[10px] sm:text-sm md:text-base tabular-nums text-center">
+            {msg}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  // Single message — centered
   return (
-    <p key={currentIndex} className="font-medium text-white tabular-nums animate-fade-in">
-      {messages[currentIndex]}
+    <p className="font-semibold text-[10px] sm:text-sm md:text-base text-white tabular-nums text-center">
+      {messages[0]}
     </p>
   );
 }

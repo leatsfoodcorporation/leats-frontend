@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export default function AddItemButton({
   className,
   children = "Add Items",
 }: AddItemButtonProps) {
+  const { canAdd } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -88,6 +90,8 @@ export default function AddItemButton({
       setIsSubmitting(false);
     }
   };
+
+  if (!canAdd("warehouse")) return null;
 
   return (
     <>

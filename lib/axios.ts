@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 // For server-side rendering, we need the full URL
 // For client-side, we can use relative URLs or the public URL
@@ -48,18 +49,14 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Silent handling - no console logs
-      
       // Only access localStorage on client-side
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        localStorage.removeItem("fcm_token"); // ✅ Clear FCM token on auth failure
+        localStorage.removeItem("fcm_token");
 
-        // Don't redirect during logout process - let the logout function handle navigation
         const isLogoutRequest = error.config?.url?.includes("/logout");
         if (!isLogoutRequest) {
-          // Use a custom event to notify components about auth failure
           window.dispatchEvent(
             new CustomEvent("auth-failure", {
               detail: { reason: "unauthorized" },
@@ -68,6 +65,24 @@ axiosInstance.interceptors.response.use(
         }
       }
     }
+
+    // 403 Forbidden — permission denied
+    // Return empty success response so components don't crash or show duplicate error toasts
+    // The PagePermissionGate already shows "Access Denied" on the page
+    if (error.response?.status === 403) {
+      if (typeof window !== "undefined") {
+        const isUserAction = ["post", "put", "patch", "delete"].includes(error.config?.method?.toLowerCase() || "");
+        if (isUserAction) {
+          // User-initiated action (save, delete, etc.) — show toast
+          const msg = error.response?.data?.error || "You don't have permission for this action";
+          toast.error("Access Denied", { description: msg, id: "permission-denied" });
+        }
+        // GET requests (page load data fetches) — silent, PagePermissionGate handles UI
+      }
+      // Return empty response so component catch blocks don't fire
+      return { data: { success: false, data: [], error: "Permission denied" }, status: 403 };
+    }
+
     return Promise.reject(error);
   }
 );

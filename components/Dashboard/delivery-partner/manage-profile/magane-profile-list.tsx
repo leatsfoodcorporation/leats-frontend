@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -68,6 +69,7 @@ import {
 } from "@/services/deliveryPartnerService";
 
 export default function ManageProfileList() {
+  const { canEdit } = usePermissions();
   const router = useRouter();
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -460,7 +462,7 @@ export default function ManageProfileList() {
                           Login
                         </DropdownMenuItem>
 
-                        {partner.partnerStatus === "active" && (
+                        {canEdit("partner_management") && partner.partnerStatus === "active" && (
                           <DropdownMenuItem
                             onClick={() => handleStatusChange(partner, "inactive")}
                           >
@@ -469,7 +471,7 @@ export default function ManageProfileList() {
                           </DropdownMenuItem>
                         )}
 
-                        {partner.partnerStatus === "inactive" && (
+                        {canEdit("partner_management") && partner.partnerStatus === "inactive" && (
                           <DropdownMenuItem
                             onClick={() => handleStatusChange(partner, "active")}
                           >
@@ -478,7 +480,7 @@ export default function ManageProfileList() {
                           </DropdownMenuItem>
                         )}
 
-                        {partner.partnerStatus !== "suspended" && (
+                        {canEdit("partner_management") && partner.partnerStatus !== "suspended" && (
                           <DropdownMenuItem
                             onClick={() => handleSuspend(partner)}
                             className="text-destructive"
@@ -488,7 +490,7 @@ export default function ManageProfileList() {
                           </DropdownMenuItem>
                         )}
 
-                        {partner.partnerStatus === "suspended" && (
+                        {canEdit("partner_management") && partner.partnerStatus === "suspended" && (
                           <DropdownMenuItem
                             onClick={() => handleStatusChange(partner, "active")}
                             className="text-green-600"

@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -83,6 +84,7 @@ const statusLabels: Record<string, string> = {
 export default function CateringServicesList() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   
   const [enquiries, setEnquiries] = useState<CateringServiceEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -303,7 +305,7 @@ export default function CateringServicesList() {
                     {new Date(enquiry.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Select
+                    {canEdit("catering_enquiries") ? <Select
                       value={enquiry.status}
                       onValueChange={(value) => handleStatusChange(enquiry.id, value)}
                     >
@@ -334,7 +336,7 @@ export default function CateringServicesList() {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </Select> : <Badge variant={statusColors[enquiry.status]}>{statusLabels[enquiry.status]}</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -346,7 +348,7 @@ export default function CateringServicesList() {
                       >
                         <Eye className="size-4" />
                       </Button>
-                      <Button
+                      {canDelete("catering_enquiries") && <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleDelete(enquiry.id, enquiry.name)}
@@ -354,7 +356,7 @@ export default function CateringServicesList() {
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="size-4" />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>

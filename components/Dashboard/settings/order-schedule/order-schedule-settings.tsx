@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import {
@@ -65,6 +66,7 @@ const getWindowStatus = (settings: OrderScheduleSettings, type: 'LIVE' | 'PRE_OR
 };
 
 export function OrderScheduleSettingsComponent() {
+  const { canEdit } = usePermissions();
   const [settings, setSettings] = useState<OrderScheduleSettings>(DEFAULT);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -160,14 +162,14 @@ export function OrderScheduleSettingsComponent() {
             place orders within these windows.
           </p>
         </div>
-        <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+        {canEdit("settings_schedule") && <Button onClick={handleSave} disabled={isSaving} className="gap-2">
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
           Save Settings
-        </Button>
+        </Button>}
       </div>
 
       {/* Current Status Card */}
@@ -223,6 +225,7 @@ export function OrderScheduleSettingsComponent() {
 
       <Separator />
 
+      <div className={!canEdit("settings_schedule") ? "pointer-events-none opacity-60" : ""}>
       {/* Live Order Section */}
       <TimeWindowCard
         title="Live Order Window"
@@ -279,6 +282,7 @@ export function OrderScheduleSettingsComponent() {
             </div>
             <Switch
               checked={settings.countdownEnabled}
+              disabled={!canEdit("settings_schedule")}
               onCheckedChange={(v) => update("countdownEnabled", v)}
             />
           </div>
@@ -316,8 +320,9 @@ export function OrderScheduleSettingsComponent() {
         onToggleScheduling={(v) => update("schedulingEnabled", v)}
       />
 
+      </div>
       {/* Save Button */}
-      <div className="flex justify-end pt-2">
+      {canEdit("settings_schedule") && <div className="flex justify-end pt-2">
         <Button onClick={handleSave} disabled={isSaving} size="lg" className="gap-2">
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -326,7 +331,7 @@ export function OrderScheduleSettingsComponent() {
           )}
           Save All Settings
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }

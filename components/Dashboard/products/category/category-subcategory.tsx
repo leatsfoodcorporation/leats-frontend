@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React from "react";
 import {
@@ -33,6 +34,7 @@ import { toast } from "sonner";
 
 export const CategorySubcategory = () => {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -134,10 +136,10 @@ export const CategorySubcategory = () => {
             </SelectContent>
           </Select>
 
-          <Button onClick={handleAddCategory}>
+          {canAdd("online_products") && <Button onClick={handleAddCategory}>
             <Plus className="size-4 mr-1" />
             Add Category
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -187,8 +189,8 @@ export const CategorySubcategory = () => {
                   <TableCell>
                     <Badge
                       variant={item.categoryIsActive ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => handleToggleCategoryStatus(item.id)}
+                      className={canEdit("online_products") ? "cursor-pointer" : ""}
+                      onClick={canEdit("online_products") ? () => handleToggleCategoryStatus(item.id) : undefined}
                     >
                       {item.categoryIsActive ? "Active" : "Inactive"}
                     </Badge>
@@ -197,9 +199,9 @@ export const CategorySubcategory = () => {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                     
-                      <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(item.id)}>
+                      {canEdit("online_products") && <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(item.id)}>
                         <Edit className="size-4" />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>

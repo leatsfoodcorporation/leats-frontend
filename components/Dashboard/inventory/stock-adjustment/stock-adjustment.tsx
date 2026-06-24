@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ interface StockAdjustment {
 
 export default function StockAdjustment() {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [filteredAdjustments, setFilteredAdjustments] = useState<
     StockAdjustment[]
@@ -197,7 +199,7 @@ export default function StockAdjustment() {
           />
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Button
+          {canAdd("stock_adjustment") && <Button
           onClick={() =>
             router.push(
               "/dashboard/inventory-management/stock-adjustment/adjustment"
@@ -206,7 +208,7 @@ export default function StockAdjustment() {
         >
           <Plus className="mr-2 h-4 w-4" />
           New Adjustment
-        </Button>
+        </Button>}
         </div>
       </div>
 
@@ -254,9 +256,9 @@ export default function StockAdjustment() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{adjustment.itemName}</span>
-                      <span className="text-xs text-muted-foreground">
+                    <div className="flex flex-col max-w-[200px]">
+                      <span className="font-medium truncate">{adjustment.itemName}</span>
+                      <span className="text-xs text-muted-foreground truncate">
                         {adjustment.category}
                       </span>
                     </div>

@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import {
@@ -32,6 +33,7 @@ interface GSTRate {
 }
 
 export const GSTSettings = () => {
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [gstRates, setGstRates] = useState<GSTRate[]>([]);
@@ -149,10 +151,10 @@ export const GSTSettings = () => {
                 Manage GST rates for your products and services
               </CardDescription>
             </div>
-            <Button onClick={() => setShowAddForm(!showAddForm)}>
+            {canAdd("settings_gst") && <Button onClick={() => setShowAddForm(!showAddForm)}>
               <Plus className="mr-2 h-4 w-4" />
               Add GST Rate
-            </Button>
+            </Button>}
           </div>
         </CardHeader>
         <CardContent>
@@ -183,19 +185,20 @@ export const GSTSettings = () => {
                     <TableCell>
                       <Switch
                         checked={rate.isActive}
+                        disabled={!canEdit("settings_gst")}
                         onCheckedChange={() =>
                           handleToggleStatus(rate.id!, rate.isActive)
                         }
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
+                      {canDelete("settings_gst") && <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(rate.id!)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      </Button>}
                     </TableCell>
                   </TableRow>
                 ))

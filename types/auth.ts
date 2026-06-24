@@ -16,12 +16,17 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'employee';
   isVerified: boolean;
   isActive?: boolean;
   lastLogin?: string;
   createdAt?: string;
   image?: string;
+
+  // Employee-specific fields
+  employeeId?: string;
+  permissions?: { module: string; actions: string[] }[];
+  roleName?: string;
   
   // Additional profile fields (available for both admin and user)
   phoneNumber?: string;

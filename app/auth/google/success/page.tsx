@@ -61,7 +61,7 @@ function GoogleAuthSuccessContent() {
 
         // Redirect based on role
         setTimeout(() => {
-          if (user.role === 'admin') {
+          if (user.role === 'admin' || user.role === 'employee') {
             router.replace('/dashboard');
           } else {
             router.replace('/');
@@ -104,7 +104,7 @@ function GoogleAuthSuccessContent() {
               Success!
             </h2>
             <p className="text-gray-600 text-sm">
-              Redirecting to your dashboard...
+              Redirecting...
             </p>
           </>
         )}

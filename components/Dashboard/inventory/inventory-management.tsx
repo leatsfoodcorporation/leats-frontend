@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +11,7 @@ import AddItemButton from "./items/add-item-button";
 import Processing from "./processing/processing-page";
 
 export const InventoryManagement = () => {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("general");
@@ -42,31 +44,31 @@ export const InventoryManagement = () => {
         {/* Header with Tabs and Button */}
         <div className="mb-6 flex items-center gap-5">
           <TabsList className="w-auto">
-            <TabsTrigger value="warehouse">Warehouse</TabsTrigger>
-            <TabsTrigger value="processing">Processing</TabsTrigger>
-            <TabsTrigger value="stock-adjustment">Stock Adjustment</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+            {canView("warehouse") && <TabsTrigger value="warehouse">Warehouse</TabsTrigger>}
+            {canView("processing") && <TabsTrigger value="processing">Processing</TabsTrigger>}
+            {canView("stock_adjustment") && <TabsTrigger value="stock-adjustment">Stock Adjustment</TabsTrigger>}
+            {canView("inventory_reports") && <TabsTrigger value="reports">Reports</TabsTrigger>}
           </TabsList>
 
           <AddItemButton>Add Items</AddItemButton>
         </div>
 
         {/* Tab Contents */}
-        <TabsContent value="warehouse" className="mt-0 w-full">
+        {canView("warehouse") && <TabsContent value="warehouse" className="mt-0 w-full">
           <Warehouse />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="processing" className="mt-0 w-full">
+        {canView("processing") && <TabsContent value="processing" className="mt-0 w-full">
           <Processing />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="stock-adjustment" className="mt-0 w-full">
+        {canView("stock_adjustment") && <TabsContent value="stock-adjustment" className="mt-0 w-full">
           <StockAdjustment />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="reports" className="mt-0 w-full">
+        {canView("inventory_reports") && <TabsContent value="reports" className="mt-0 w-full">
           <InventoryReports />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

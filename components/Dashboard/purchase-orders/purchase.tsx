@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,7 @@ import Reports from "./reports/reports"
 
 
 export const PurchaseOrders = () => {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("suppliers-list");
@@ -47,30 +49,30 @@ export const PurchaseOrders = () => {
         {/* Header with Tabs and Button */}
         <div className="mb-6 flex items-center gap-5">
           <TabsList className="w-auto">
-            <TabsTrigger value="suppliers-list">Suppliers</TabsTrigger>
-            <TabsTrigger value="purchases-list">Purchases</TabsTrigger>
-            <TabsTrigger value="bills-list">Bills</TabsTrigger>
-            <TabsTrigger value="expenses-list">Expenses</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+            {canView("suppliers") && <TabsTrigger value="suppliers-list">Suppliers</TabsTrigger>}
+            {canView("purchase_orders") && <TabsTrigger value="purchases-list">Purchases</TabsTrigger>}
+            {canView("bills") && <TabsTrigger value="bills-list">Bills</TabsTrigger>}
+            {canView("expenses") && <TabsTrigger value="expenses-list">Expenses</TabsTrigger>}
+            {canView("purchase_reports") && <TabsTrigger value="reports">Reports</TabsTrigger>}
           </TabsList>
         </div>
 
         {/* Tab Contents */}
-        <TabsContent value="suppliers-list" className="mt-0 w-full">
+        {canView("suppliers") && <TabsContent value="suppliers-list" className="mt-0 w-full">
           <SuppliersList />
-        </TabsContent>
-        <TabsContent value="purchases-list" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("purchase_orders") && <TabsContent value="purchases-list" className="mt-0 w-full">
           <PurchasesList />
-        </TabsContent>
-        <TabsContent value="bills-list" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("bills") && <TabsContent value="bills-list" className="mt-0 w-full">
           <BillsList />
-        </TabsContent>
-        <TabsContent value="expenses-list" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("expenses") && <TabsContent value="expenses-list" className="mt-0 w-full">
           <ExpensesList />
-        </TabsContent>
-        <TabsContent value="reports" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("purchase_reports") && <TabsContent value="reports" className="mt-0 w-full">
           <Reports />
-        </TabsContent>
+        </TabsContent>}
        
       </Tabs>
     </div>

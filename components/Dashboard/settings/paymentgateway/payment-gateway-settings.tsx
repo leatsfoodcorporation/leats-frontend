@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -19,6 +20,7 @@ interface PaymentGatewayFormData {
 }
 
  export const PaymentGatewaySettings = () => {
+  const { canEdit } = usePermissions();
   const [gateways, setGateways] = useState<PaymentGateway[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -399,6 +401,7 @@ interface PaymentGatewayFormData {
               </span>
               <Switch
                 checked={currentGateway.isActive}
+                disabled={!canEdit("settings_payment")}
                 onCheckedChange={(isActive) => {
                   if (activeTab === "razorpay") {
                     setRazorpayConfig((prev) => ({ ...prev, isActive }));
@@ -434,6 +437,7 @@ interface PaymentGatewayFormData {
                     id="apiKey"
                     type="text"
                     required
+                    disabled={!canEdit("settings_payment")}
                     value={currentGateway.apiKey}
                     onChange={(e) => {
                       if (activeTab === "razorpay") {
@@ -467,6 +471,7 @@ interface PaymentGatewayFormData {
                   <input
                     id="secretKey"
                     type="password"
+                    disabled={!canEdit("settings_payment")}
                     value={currentGateway.secretKey}
                     onChange={(e) => {
                       if (activeTab === "razorpay") {
@@ -504,6 +509,7 @@ interface PaymentGatewayFormData {
                 <input
                   id="webhookSecret"
                   type="password"
+                  disabled={!canEdit("settings_payment")}
                   value={currentGateway.webhookSecret}
                   onChange={(e) => {
                     if (activeTab === "razorpay") {
@@ -558,9 +564,9 @@ interface PaymentGatewayFormData {
                     </span>
                   </div>
                 </div>
-                <Button type="submit" disabled={saving === activeTab}>
+                {canEdit("settings_payment") && <Button type="submit" disabled={saving === activeTab}>
                   {saving === activeTab ? "Saving..." : "Save Configuration"}
-                </Button>
+                </Button>}
               </div>
             </form>
           )}

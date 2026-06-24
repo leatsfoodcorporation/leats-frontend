@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -64,6 +65,7 @@ const getStatusLabel = (status: string): string => {
 
 export default function PurchasesList() {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,10 +259,10 @@ export default function PurchasesList() {
             className="pl-9"
           />
         </div>
-        <Button onClick={handleCreate}>
+        {canAdd("purchase_orders") && <Button onClick={handleCreate}>
           <Plus className="size-4" />
           Create Purchase Order
-        </Button>
+        </Button>}
       </div>
 
       {/* Purchase Orders Table */}
@@ -320,7 +322,7 @@ export default function PurchasesList() {
                       <Badge variant={getStatusColor(po.poStatus)}>
                         {getStatusLabel(po.poStatus)}
                       </Badge>
-                    ) : (
+                    ) : canEdit("purchase_orders") ? (
                       <Select
                         value={po.poStatus}
                         onValueChange={(value) =>
@@ -351,6 +353,10 @@ export default function PurchasesList() {
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : (
+                      <Badge variant={getStatusColor(po.poStatus)}>
+                        {getStatusLabel(po.poStatus)}
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -363,7 +369,7 @@ export default function PurchasesList() {
                       >
                         <Eye className="size-4" />
                       </Button>
-                      <Button
+                      {canEdit("purchase_orders") && <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleEdit(po.id)}
@@ -371,7 +377,7 @@ export default function PurchasesList() {
                         disabled={po.poStatus === "completed"}
                       >
                         <Edit className="size-4" />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>

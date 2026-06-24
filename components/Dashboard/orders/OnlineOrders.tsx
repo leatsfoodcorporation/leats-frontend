@@ -1,5 +1,7 @@
 "use client";
 
+
+import { usePermissions } from "@/hooks/usePermissions";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { subscribeToEvent, unsubscribeFromEvent } from "@/lib/socket/socketClient";
@@ -154,6 +156,7 @@ interface OnlineOrder {
 
 export function OnlineOrders() {
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<OnlineOrder | null>(null);
@@ -1119,7 +1122,7 @@ export function OnlineOrders() {
                       {getPaymentStatusBadge(order.paymentStatus, order.orderStatus)}
                     </div>
                   </TableCell>
-                  <TableCell>{getStatusDropdown(order)}</TableCell>
+                  <TableCell>{canEdit("online_orders") ? getStatusDropdown(order) : <span className="capitalize text-xs">{order.orderStatus}</span>}</TableCell>
                   <TableCell>
                     {order.orderType === 'PRE_ORDER' ? (
                       <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
@@ -1165,7 +1168,7 @@ export function OnlineOrders() {
                         <IconEye size={16} />
                       </Button>
                       {/* Only show delivery assignment for confirmed orders and later */}
-                      {order.orderStatus !== 'pending' && order.orderStatus !== 'cancelled' && (
+                      {canEdit("online_orders") && order.orderStatus !== 'pending' && order.orderStatus !== 'cancelled' && (
                         <Button
                           size="sm"
                           variant={order.deliveryPartnerId ? "default" : "outline"}

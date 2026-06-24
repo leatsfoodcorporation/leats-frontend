@@ -1,10 +1,12 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -66,6 +68,7 @@ interface Product {
 
 export const PosProductsList = () => {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -351,18 +354,18 @@ export const PosProductsList = () => {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category.charAt(0).toUpperCase() + category.slice(1)}
-            </Button>
-          ))}
-        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category === "all" ? "All Categories" : category.charAt(0).toUpperCase() + category.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Products Table */}
@@ -501,6 +504,7 @@ export const PosProductsList = () => {
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={product.display === "active"}
+                        disabled={!canEdit("pos_products")}
                         onCheckedChange={() =>
                           handleToggleDisplay(product, product.display)
                         }
@@ -512,15 +516,15 @@ export const PosProductsList = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
+                      {canEdit("pos_products") && <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleEdit(product)}
                         title="Edit product"
                       >
                         <Edit className="size-4" />
-                      </Button>
-                      {product._source === 'pos' && (
+                      </Button>}
+                      {product._source === 'pos' && canDelete("pos_products") && (
                         <Button
                           variant="ghost"
                           size="icon-sm"

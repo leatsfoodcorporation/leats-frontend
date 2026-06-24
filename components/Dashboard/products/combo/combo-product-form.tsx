@@ -647,7 +647,7 @@ export function ComboProductForm({ productId }: ComboProductFormProps = {}) {
         inventoryProductId: variant.inventoryProductId, // 🆕 Capture inventory ID from variant
         variantIndex,
         quantity: 1,
-        productName: product.brand || product.shortDescription || "Product",
+        productName: product.brand || "Product",
         variantName: variant.variantName,
         variantImage: variant.variantImages?.[0] as string,
         variantPrice: variant.variantSellingPrice,
@@ -1068,12 +1068,12 @@ export function ComboProductForm({ productId }: ComboProductFormProps = {}) {
                                     aria-expanded={openProductCombobox[productIndex]}
                                     className="w-full justify-between"
                                   >
-                                    {selectedProduct.productId ? (
+                                    {selectedProduct.productId && product ? (
                                       <div className="flex items-center gap-2 truncate">
                                         <Badge variant="outline" className="text-xs">
-                                          {product?.category}
+                                          {product.category}
                                         </Badge>
-                                        <span className="truncate">{product?.brand}</span>
+                                        <span className="truncate font-medium">{(product.variants.find(v => v.isDefault) || product.variants[0])?.variantName || product.brand}</span>
                                       </div>
                                     ) : (
                                       "Choose a product..."
@@ -1081,7 +1081,7 @@ export function ComboProductForm({ productId }: ComboProductFormProps = {}) {
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[400px] p-0" align="start">
+                                <PopoverContent className="w-[550px] p-0" align="start">
                                   <Command>
                                     <CommandInput placeholder="Search products..." />
                                     <CommandList>
@@ -1094,10 +1094,11 @@ export function ComboProductForm({ productId }: ComboProductFormProps = {}) {
                                             ? ` (${formatSmartUOMDisplay(defaultVariant.variantUomValue, defaultVariant.variantUom)})`
                                             : '';
                                           
+                                          const displayName = defaultVariant?.variantName || prod.brand;
                                           return (
                                             <CommandItem
                                               key={prod.id}
-                                              value={`${prod.brand} ${prod.shortDescription} ${prod.category}`}
+                                              value={`${displayName} ${prod.brand} ${prod.category}`}
                                               onSelect={() => {
                                                 handleProductSelect(productIndex, prod.id);
                                                 setOpenProductCombobox(prev => ({ ...prev, [productIndex]: false }));
@@ -1113,17 +1114,14 @@ export function ComboProductForm({ productId }: ComboProductFormProps = {}) {
                                                 <Badge variant="outline" className="text-xs shrink-0">
                                                   {prod.category}
                                                 </Badge>
-                                                <span className="truncate">
-                                                  {prod.brand}
-                                                  <span className="text-muted-foreground text-xs ml-1">
-                                                    - {prod.shortDescription}
-                                                  </span>
+                                                <div className="truncate">
+                                                  <span className="font-medium">{displayName}</span>
                                                   {uomDisplay && (
                                                     <span className="text-primary text-xs ml-1 font-medium">
                                                       {uomDisplay}
                                                     </span>
                                                   )}
-                                                </span>
+                                                </div>
                                               </div>
                                             </CommandItem>
                                           );

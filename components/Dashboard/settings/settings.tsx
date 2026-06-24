@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +15,7 @@ import { OrderScheduleSettingsComponent } from "@/components/Dashboard/settings/
 import { useEffect, useState } from "react";
 
 export const Settings = () => {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("general");
@@ -55,63 +57,63 @@ export const Settings = () => {
         className="w-full"
       >
         <TabsList className="w-full max-w-6xl grid grid-cols-8">
-          <TabsTrigger value="general">
+          {canView("settings_general") && <TabsTrigger value="general">
             General
-          </TabsTrigger>
-          <TabsTrigger value="email-configuration">
+          </TabsTrigger>}
+          {canView("settings_email") && <TabsTrigger value="email-configuration">
             Email
-          </TabsTrigger>
-          <TabsTrigger value="payment-gateway">
+          </TabsTrigger>}
+          {canView("settings_payment") && <TabsTrigger value="payment-gateway">
             Payment
-          </TabsTrigger>
-          <TabsTrigger value="invoice">
+          </TabsTrigger>}
+          {canView("settings_invoice") && <TabsTrigger value="invoice">
             Invoice
-          </TabsTrigger>
-          <TabsTrigger value="gst">
+          </TabsTrigger>}
+          {canView("settings_gst") && <TabsTrigger value="gst">
             GST
-          </TabsTrigger>
-          <TabsTrigger value="delivery-zones">
+          </TabsTrigger>}
+          {canView("settings_zones") && <TabsTrigger value="delivery-zones">
             Zones
-          </TabsTrigger>
-          <TabsTrigger value="delivery-charge">
+          </TabsTrigger>}
+          {canView("settings_charge") && <TabsTrigger value="delivery-charge">
             Charges
-          </TabsTrigger>
-          <TabsTrigger value="order-schedule">
+          </TabsTrigger>}
+          {canView("settings_schedule") && <TabsTrigger value="order-schedule">
             Schedule
-          </TabsTrigger>
+          </TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="general" className="mt-6 w-full">
+        {canView("settings_general") && <TabsContent value="general" className="mt-6 w-full">
           <GeneralSettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="email-configuration" className="mt-6 w-full">
+        {canView("settings_email") && <TabsContent value="email-configuration" className="mt-6 w-full">
           <EmailConfiguration />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="payment-gateway" className="mt-6 w-full">
+        {canView("settings_payment") && <TabsContent value="payment-gateway" className="mt-6 w-full">
           <PaymentGatewaySettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="invoice" className="mt-6 w-full">
+        {canView("settings_invoice") && <TabsContent value="invoice" className="mt-6 w-full">
           <InvoiceSettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="gst" className="mt-6 w-full">
+        {canView("settings_gst") && <TabsContent value="gst" className="mt-6 w-full">
           <GSTSettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="delivery-zones" className="mt-6 w-full">
+        {canView("settings_zones") && <TabsContent value="delivery-zones" className="mt-6 w-full">
           <DeliveryZoneSettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="delivery-charge" className="mt-6 w-full">
+        {canView("settings_charge") && <TabsContent value="delivery-charge" className="mt-6 w-full">
           <DeliveryChargeSettings />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="order-schedule" className="mt-6 w-full">
+        {canView("settings_schedule") && <TabsContent value="order-schedule" className="mt-6 w-full">
           <OrderScheduleSettingsComponent />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

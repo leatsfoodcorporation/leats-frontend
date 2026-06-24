@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,6 +52,7 @@ type Warehouse = {
 export default function Warehouse() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -268,7 +270,7 @@ export default function Warehouse() {
           />
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Button
+          {canAdd("warehouse") && <Button
             onClick={() => {
               setEditingWarehouse(null);
               setIsAddDialogOpen(true);
@@ -279,7 +281,7 @@ export default function Warehouse() {
           >
             <Plus className="size-4" />
             Add Warehouse
-          </Button>
+          </Button>}
           {warehouses.length >= 1 && (
             <p className="text-xs text-muted-foreground">
               Multiple warehouses coming soon
@@ -350,22 +352,22 @@ export default function Warehouse() {
                         >
                           <Eye className="size-4" />
                         </Button>
-                        <Button
+                        {canEdit("warehouse") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleEdit(warehouse)}
                           title="Edit warehouse"
                         >
                           <Edit className="size-4" />
-                        </Button>
-                        <Button
+                        </Button>}
+                        {canEdit("warehouse") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleStatusToggle(warehouse)}
                           title={warehouse.status === "active" ? "Deactivate warehouse" : "Activate warehouse"}
                         >
                           <Power className={`size-4 ${warehouse.status === "active" ? "text-destructive" : "text-green-600"}`} />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                   </TableRow>

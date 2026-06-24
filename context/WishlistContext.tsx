@@ -30,7 +30,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   // Load wishlist when user logs in
   useEffect(() => {
-    if (isAuthenticated && user?.id && user?.role === 'user') {
+    if (isAuthenticated && user?.id && (user?.role === 'user' || user?.role === 'employee')) {
       loadWishlist();
     } else {
       // Clear wishlist when user logs out or is admin
@@ -39,7 +39,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }, [user?.id, user?.role, isAuthenticated]);
 
   const loadWishlist = async () => {
-    if (!isAuthenticated || !user?.id || user?.role !== 'user') return;
+    if (!isAuthenticated || !user?.id || user?.role !== 'user' && user?.role !== 'employee') return;
 
     try {
       setIsLoading(true);
@@ -69,7 +69,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Wishlist is only available for customers');
       return;
     }
@@ -128,7 +128,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Wishlist is only available for customers');
       return;
     }
@@ -156,7 +156,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   };
 
   const isInWishlist = (productId: string | number): boolean => {
-    if (!isAuthenticated || user?.role !== 'user') return false;
+    if (!isAuthenticated || user?.role !== 'user' && user?.role !== 'employee') return false;
     
     const targetId = typeof productId === 'string' ? productId : productId.toString();
     return items.some(item => {
@@ -181,7 +181,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Wishlist is only available for customers');
       return;
     }

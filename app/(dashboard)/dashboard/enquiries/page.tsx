@@ -6,10 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BulkOrdersList from "@/components/Dashboard/enquiries/bulk-orders-list";
 import CateringServicesList from "@/components/Dashboard/enquiries/catering-services-list";
 import { Package, UtensilsCrossed } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function EnquiriesContent() {
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "bulk-orders";
+  const { canView } = usePermissions();
+  const activeTab = searchParams.get("tab") || (canView("bulk_enquiries") ? "bulk-orders" : "catering-services");
 
   return (
     <div className="space-y-6">
@@ -22,8 +24,8 @@ function EnquiriesContent() {
 
       <Tabs value={activeTab} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger 
-            value="bulk-orders" 
+          {canView("bulk_enquiries") && <TabsTrigger
+            value="bulk-orders"
             className="flex items-center gap-2"
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());
@@ -35,9 +37,9 @@ function EnquiriesContent() {
           >
             <Package className="size-4" />
             <span>Bulk Orders</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="catering-services" 
+          </TabsTrigger>}
+          {canView("catering_enquiries") && <TabsTrigger
+            value="catering-services"
             className="flex items-center gap-2"
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());
@@ -49,16 +51,16 @@ function EnquiriesContent() {
           >
             <UtensilsCrossed className="size-4" />
             <span>Catering Services</span>
-          </TabsTrigger>
+          </TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="bulk-orders" className="space-y-4">
+        {canView("bulk_enquiries") && <TabsContent value="bulk-orders" className="space-y-4">
           <BulkOrdersList />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="catering-services" className="space-y-4">
+        {canView("catering_enquiries") && <TabsContent value="catering-services" className="space-y-4">
           <CateringServicesList />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

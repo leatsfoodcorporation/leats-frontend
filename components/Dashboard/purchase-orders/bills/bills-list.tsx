@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 
 export default function BillsList() {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,14 +132,14 @@ export default function BillsList() {
             className="pl-9"
           />
         </div>
-        <Button
+        {canAdd("bills") && <Button
           onClick={() =>
             router.push("/dashboard/purchase-orders/bills-list/new")
           }
         >
           <Plus className="size-4" />
           Create Bill / GRN
-        </Button>
+        </Button>}
       </div>
 
       {/* Table */}
@@ -224,7 +226,7 @@ export default function BillsList() {
                         >
                           <Eye className="size-4" />
                         </Button>
-                        <Button
+                        {canEdit("bills") && <Button
                           variant="ghost"
                           size="sm"
                           onClick={() =>
@@ -235,7 +237,7 @@ export default function BillsList() {
                           title="Edit"
                         >
                           <Edit className="size-4" />
-                        </Button>
+                        </Button>}
                         {/* <Button variant="ghost" size="sm" title="Download PDF">
                           <FileText className="size-4" />
                         </Button> */}

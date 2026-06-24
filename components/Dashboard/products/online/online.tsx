@@ -1,5 +1,7 @@
 "use client";
 
+
+import { usePermissions } from "@/hooks/usePermissions";
 import React from "react";
 import {
   Table,
@@ -60,6 +62,7 @@ import { formatSmartUOMDisplay } from "@/lib/uom-constants";
 export default function Online() {
   const router = useRouter();
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
   const [brandFilter, setBrandFilter] = React.useState("all");
@@ -407,14 +410,14 @@ export default function Online() {
           )}
          
 
-          <Button
+          {canAdd("online_products") && <Button
             onClick={handleAddProduct}
             className="w-full sm:w-auto text-sm"
             size="sm"
           >
             <Plus className="size-4 mr-1" />
             Add Product
-          </Button>
+          </Button>}
           
         </div>
       </div>
@@ -742,6 +745,7 @@ export default function Online() {
                                 </div>
                                 <Switch
                                   checked={variant.variantStatus === "active"}
+                                  disabled={!canEdit("online_products")}
                                   onCheckedChange={(checked) =>
                                     handleToggleVariantStatus(product.id, index, checked)
                                   }
@@ -774,22 +778,22 @@ export default function Online() {
                         >
                           <Eye className="size-4" />
                         </Button>
-                        <Button
+                        {canEdit("online_products") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleEdit(product.id)}
                           title="Edit"
                         >
                           <Edit className="size-4" />
-                        </Button>
-                        <Button
+                        </Button>}
+                        {canDelete("online_products") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleDelete(product)}
                           title="Delete"
                         >
                           <Trash2 className="size-4 text-destructive" />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -929,7 +933,7 @@ export default function Online() {
                         <Eye className="size-3 mr-1" />
                         View
                       </Button>
-                      <Button
+                      {canEdit("online_products") && <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(product.id)}
@@ -937,15 +941,15 @@ export default function Online() {
                       >
                         <Edit className="size-3 mr-1" />
                         Edit
-                      </Button>
-                      <Button
+                      </Button>}
+                      {canDelete("online_products") && <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(product)}
                         className="text-xs h-8 px-2"
                       >
                         <Trash2 className="size-3 text-destructive" />
-                      </Button>
+                      </Button>}
                     </div>
                   </div>
                 </div>

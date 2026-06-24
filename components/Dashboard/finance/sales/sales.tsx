@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +9,7 @@ import PosSalesList from "./pos-sales/pos-sales-list";
 import SalesReports from "../reports/sales-reports";
 
 export const Sales = () => {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("online-sales");
@@ -43,22 +45,22 @@ export const Sales = () => {
         {/* Header with Tabs */}
         <div className="mb-6 flex items-center gap-5">
           <TabsList className="w-auto">
-            <TabsTrigger value="online-sales">Online Sales</TabsTrigger>
-            <TabsTrigger value="pos-sales">POS Sales</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+            {canView("online_sales") && <TabsTrigger value="online-sales">Online Sales</TabsTrigger>}
+            {canView("pos_sales") && <TabsTrigger value="pos-sales">POS Sales</TabsTrigger>}
+            {canView("sales_reports") && <TabsTrigger value="reports">Reports</TabsTrigger>}
           </TabsList>
         </div>
 
         {/* Tab Contents */}
-        <TabsContent value="online-sales" className="mt-0 w-full">
+        {canView("online_sales") && <TabsContent value="online-sales" className="mt-0 w-full">
           <OnlineSalesList />
-        </TabsContent>
-        <TabsContent value="pos-sales" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("pos_sales") && <TabsContent value="pos-sales" className="mt-0 w-full">
           <PosSalesList />
-        </TabsContent>
-        <TabsContent value="reports" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("sales_reports") && <TabsContent value="reports" className="mt-0 w-full">
           <SalesReports />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

@@ -70,7 +70,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthContext();
 
   const loadCart = useCallback(async (silent: boolean = false) => {
-    if (!isAuthenticated || !user?.id || user?.role !== 'user') return;
+    if (!isAuthenticated || !user?.id || user?.role !== 'user' && user?.role !== 'employee') return;
 
     try {
       // Only show loading skeleton on initial load, not on silent refreshes
@@ -129,7 +129,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authLoading) return;
 
-    if (isAuthenticated && user?.id && user?.role === 'user') {
+    if (isAuthenticated && user?.id && (user?.role === 'user' || user?.role === 'employee')) {
       loadCart();
     } else {
       // Clear cart when user logs out or is admin
@@ -140,7 +140,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Add cart validation on mount - check if cart is empty but should have items
   useEffect(() => {
-    if (!isInitialized || !isAuthenticated || user?.role !== 'user') return;
+    if (!isInitialized || !isAuthenticated || user?.role !== 'user' && user?.role !== 'employee') return;
     
     // If cart is empty after loading, it might have been cleared
     // This is normal, but we log it for debugging
@@ -162,7 +162,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Cart is only available for customers');
       return;
     }
@@ -479,7 +479,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Cart is only available for customers');
       return;
     }
@@ -548,7 +548,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Cart is only available for customers');
       return null;
     }
@@ -727,7 +727,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getItemQuantity = (productId: string, inventoryProductId: string, variantIndex: number, selectedCuttingStyle?: string): number => {
-    if (!isAuthenticated || user?.role !== 'user') return 0;
+    if (!isAuthenticated || user?.role !== 'user' && user?.role !== 'employee') return 0;
     
     const item = items.find(
       item => item.productId === productId && 
@@ -751,7 +751,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user?.role !== 'user') {
+    if (user?.role !== 'user' && user?.role !== 'employee') {
       toast.error('Cart is only available for customers');
       return;
     }

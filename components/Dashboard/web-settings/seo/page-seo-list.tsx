@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -43,6 +44,7 @@ interface PageSEO {
 }
 
 export const PageSEOList = () => {
+  const { canEdit } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -511,7 +513,7 @@ export const PageSEOList = () => {
                 <Button variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} disabled={saving}>
+                {canEdit("web_seo") && <Button onClick={handleSave} disabled={saving}>
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -523,7 +525,7 @@ export const PageSEOList = () => {
                       Save Changes
                     </>
                   )}
-                </Button>
+                </Button>}
               </div>
             </div>
           )}

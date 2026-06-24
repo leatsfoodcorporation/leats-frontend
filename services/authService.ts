@@ -65,10 +65,10 @@ interface ApiResponse<T> {
 
 // Auth Services
 export const authService = {
-  // Get current admin profile
+  // Get admin business settings (state, GST, currency, etc.) — works for both admin & employee
   getCurrentAdmin: async (): Promise<AdminProfile> => {
     const response = await axiosInstance.get<ApiResponse<AdminProfile>>(
-      "/api/auth/admin/me"
+      "/api/auth/admin/settings"
     );
     return response.data.data;
   },

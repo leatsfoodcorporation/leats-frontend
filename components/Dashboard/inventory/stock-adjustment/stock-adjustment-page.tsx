@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
@@ -89,6 +90,7 @@ const reasons = [
 ];
 
 export default function StockAdjustmentPage() {
+  const { canAdd } = usePermissions();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AdjustmentItem[]>([]);
@@ -599,7 +601,7 @@ export default function StockAdjustmentPage() {
             <Button variant="outline" onClick={() => router.back()}>
               Cancel
             </Button>
-            <Button
+            {canAdd("stock_adjustment") && <Button
               onClick={handleSave}
               className={cn(
                 items.some(item => {
@@ -620,7 +622,7 @@ export default function StockAdjustmentPage() {
               }
             >
               {isSubmitting ? "Submitting..." : `Confirm Adjustment (${items.length})`}
-            </Button>
+            </Button>}
           </div>
         </CardFooter>
       </Card>

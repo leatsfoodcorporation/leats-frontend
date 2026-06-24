@@ -43,7 +43,7 @@ const getDeviceInfo = (): string => {
 export const saveFCMToken = async (
   userId: string,
   fcmToken: string,
-  userType: 'user' | 'admin'
+  userType: 'user' | 'admin' | 'employee'
 ): Promise<{ success: boolean; message?: string; totalDevices?: number }> => {
   try {
     // ✅ Check if token is already saved for this user
@@ -88,7 +88,7 @@ export const saveFCMToken = async (
  */
 export const removeFCMToken = async (
   userId: string,
-  userType: 'user' | 'admin',
+  userType: 'user' | 'admin' | 'employee',
   fcmToken?: string // Optional: remove specific token, or all if not provided
 ): Promise<{ success: boolean; message?: string }> => {
   try {

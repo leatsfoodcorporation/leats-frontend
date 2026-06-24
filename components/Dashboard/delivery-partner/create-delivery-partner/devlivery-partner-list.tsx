@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -63,6 +64,7 @@ export default function DeliveryPartnerList({
   onDataChange,
 }: DeliveryPartnerListProps) {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -144,7 +146,7 @@ export default function DeliveryPartnerList({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {status === "pending" && (
+          {status === "pending" && canEdit("partner_applications") && (
             <DropdownMenuItem
               onClick={() => handleStatusChange(partner, "verified")}
               className="text-blue-600"
@@ -154,18 +156,18 @@ export default function DeliveryPartnerList({
           )}
           {status === "verified" && (
             <>
-              <DropdownMenuItem
+              {canEdit("partner_applications") && <DropdownMenuItem
                 onClick={() => handleStatusChange(partner, "approved")}
                 className="text-green-600"
               >
                 Approve Partner
-              </DropdownMenuItem>
-              <DropdownMenuItem
+              </DropdownMenuItem>}
+              {canEdit("partner_applications") && <DropdownMenuItem
                 onClick={() => handleStatusChange(partner, "rejected")}
                 className="text-destructive"
               >
                 Reject Partner
-              </DropdownMenuItem>
+              </DropdownMenuItem>}
             </>
           )}
         </DropdownMenuContent>

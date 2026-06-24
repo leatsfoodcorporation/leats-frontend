@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React from "react";
 import {
@@ -50,6 +51,7 @@ import { toast } from "sonner";
 
 export const SubcategoryList = () => {
   const router = useRouter();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -180,10 +182,10 @@ export const SubcategoryList = () => {
             </SelectContent>
           </Select>
 
-          <Button onClick={handleAddSubcategory}>
+          {canAdd("online_products") && <Button onClick={handleAddSubcategory}>
             <Plus className="size-4 mr-1" />
             Add Subcategory
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -244,8 +246,8 @@ export const SubcategoryList = () => {
                   <TableCell>
                     <Badge
                       variant={item.subcategoryIsActive ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => handleToggleSubcategoryStatus(item.id)}
+                      className={canEdit("online_products") ? "cursor-pointer" : ""}
+                      onClick={canEdit("online_products") ? () => handleToggleSubcategoryStatus(item.id) : undefined}
                     >
                       {item.subcategoryIsActive ? "Active" : "Inactive"}
                     </Badge>
@@ -256,9 +258,9 @@ export const SubcategoryList = () => {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                      
-                      <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(item.id)}>
+                      {canEdit("online_products") && <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(item.id)}>
                         <Edit className="size-4" />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>
