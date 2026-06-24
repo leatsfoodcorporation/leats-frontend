@@ -9,7 +9,7 @@ interface AdminRouteGuardProps {
 }
 
 export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) => {
-  const { user, isLoading, isAuthenticated, isAdmin } = useAuth(true);
+  const { user, isLoading, isAuthenticated, isAdmin, isEmployee } = useAuth(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,15 +19,14 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
         return;
       }
 
-      if (!isAdmin()) {
-        // Redirect non-admin users to home page
+      // Allow admin + employee, block user + delivery_partner
+      if (!isAdmin() && !isEmployee()) {
         router.replace('/');
         return;
       }
     }
-  }, [isLoading, isAuthenticated, isAdmin, router]);
+  }, [isLoading, isAuthenticated, isAdmin, isEmployee, router]);
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -36,8 +35,7 @@ export const AdminRouteGuard: React.FC<AdminRouteGuardProps> = ({ children }) =>
     );
   }
 
-  // Show loading while redirecting non-admin users
-  if (!isAuthenticated || !isAdmin()) {
+  if (!isAuthenticated || (!isAdmin() && !isEmployee())) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

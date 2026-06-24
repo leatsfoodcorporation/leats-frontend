@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -47,6 +48,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 export default function ExpensesList() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(
     []
@@ -305,7 +307,7 @@ export default function ExpensesList() {
             </SelectContent>
           </Select>
 
-          <Button
+          {canAdd("expenses") && <Button
             onClick={() => {
               setSelectedExpense(null);
               setIsAddDialogOpen(true);
@@ -314,7 +316,7 @@ export default function ExpensesList() {
           >
             <Plus className="size-4" />
             Add Expense
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -368,14 +370,14 @@ export default function ExpensesList() {
                   <TableCell>{expense.paymentMethod || "-"}</TableCell>
                   <TableCell>{getStatusBadge(expense.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Button
+                    {canEdit("expenses") && <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(expense)}
                       title="Edit expense"
                     >
                       <Edit className="size-4" />
-                    </Button>
+                    </Button>}
                   </TableCell>
                 </TableRow>
               ))

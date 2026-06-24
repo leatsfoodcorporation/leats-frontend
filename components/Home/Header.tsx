@@ -71,6 +71,15 @@ export default function Header({ initialCategories, initialWebSettings, initialP
   const [promotionalOffers] = useState<PromotionalOffer[]>(initialPromotionalOffers);
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const { totalItems, totalPrice } = useCart();
+
+  // Rotate coupon codes every 4 seconds
+  useEffect(() => {
+    if (promotionalOffers.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentOfferIndex((prev) => (prev + 1) % promotionalOffers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [promotionalOffers.length]);
   const { totalItems: wishlistCount } = useWishlist();
   const { user, isAuthenticated, logout } = useAuthContext();
   const { location, setIsModalOpen } = useLocation();
@@ -200,31 +209,28 @@ export default function Header({ initialCategories, initialWebSettings, initialP
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Top Header Bar - Same Red as Category Bar */}
+      {/* Top Header Bar — Coupon Codes */}
       <div className="bg-[#e63946]">
         <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-center py-1.5 sm:py-2 text-white text-[10px] sm:text-xs md:text-sm relative">
-            {/* Left Links - Hidden on mobile */}
-            <div className="hidden sm:flex items-center gap-4 sm:gap-6 absolute left-3 sm:left-4">
-              {/* <Link href="/about" className="hover:underline hidden md:block">
-                About Us
-              </Link> */}
-              <Link
-                href="/contact"
-                className="hover:underline flex items-center gap-1"
-              >
-                <IconPhone size={14} className="hidden md:block" />
-                <span>Customer Support</span>
-              </Link>
-            </div>
-
-            {/* Center - Live/Pre-Order Countdown Only */}
+          <div className="flex items-center justify-center py-1.5 sm:py-2 text-white text-[10px] sm:text-xs md:text-sm">
+            {/* Promotional Coupon Codes */}
             <div className="text-center flex-1 overflow-hidden">
-              <OrderCountdownBanner />
+              {promotionalOffers.length > 0 ? (
+                 <p 
+                  key={currentOfferIndex}
+                  className="font-medium text-white animate-fade-in"
+                >
+                  {formatOfferText(promotionalOffers[currentOfferIndex])}
+                </p>
+              ) : (
+                <span className="font-medium"></span>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+    
 
       {/* Main Header - White Background */}
       <div className="bg-white shadow-sm">
@@ -290,8 +296,8 @@ export default function Header({ initialCategories, initialWebSettings, initialP
               )}
             </button>
 
-            {/* Shop by Category - Desktop Only */}
-            <div
+            {/* Shop by Category - Desktop Only — HIDDEN (commented out) */}
+            {false && <div
               className="relative hidden lg:block"
               onMouseEnter={() => setShowMegaMenu(true)}
               onMouseLeave={() => setShowMegaMenu(false)}
@@ -316,7 +322,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                       <div
                         key={category.id}
                         className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
-                          activeCategory.id === category.id
+                          activeCategory!.id === category.id
                             ? "bg-white text-[#e63946] border-l-4 border-[#e63946]"
                             : "hover:bg-white text-gray-700"
                         }`}
@@ -336,21 +342,21 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                   <div className="flex-1 p-6">
                     <div className="mb-4">
                       <Link
-                        href={generateCategoryUrl(activeCategory)}
+                        href={generateCategoryUrl(activeCategory!)}
                         className="text-lg font-bold text-gray-800 hover:text-[#e63946] transition-colors"
                       >
-                        {activeCategory.name}
+                        {activeCategory!.name}
                       </Link>
                     </div>
 
-                    {activeCategory.subcategories &&
-                    activeCategory.subcategories.length > 0 ? (
+                    {activeCategory!.subcategories &&
+                    activeCategory!.subcategories.length > 0 ? (
                       <>
                         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                          {activeCategory.subcategories.map((sub) => (
+                          {activeCategory!.subcategories.map((sub) => (
                             <Link
                               key={sub.id}
-                              href={`${generateCategoryUrl(activeCategory)}?sub=${sub.id}`}
+                              href={`${generateCategoryUrl(activeCategory!)}?sub=${sub.id}`}
                               className="text-sm text-gray-600 hover:text-[#e63946] hover:underline transition-colors py-1"
                             >
                               {sub.name}
@@ -360,10 +366,10 @@ export default function Header({ initialCategories, initialWebSettings, initialP
 
                         <div className="mt-6 pt-4 border-t border-gray-200">
                           <Link
-                            href={generateCategoryUrl(activeCategory)}
+                            href={generateCategoryUrl(activeCategory!)}
                             className="inline-flex items-center gap-2 text-[#e63946] font-medium text-sm hover:underline"
                           >
-                            View All {activeCategory.name}
+                            View All {activeCategory!.name}
                             <IconChevronRight size={16} />
                           </Link>
                         </div>
@@ -376,7 +382,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Search Bar - Desktop */}
             <div className="hidden md:flex flex-1 max-w-xl lg:max-w-2xl relative" ref={searchRef}>
@@ -525,7 +531,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="hidden md:flex items-center gap-1 lg:gap-2 text-gray-700 hover:text-[#e63946] focus:outline-none">
-                    {user.image && user.image.trim() !== "" ? (
+                    {user.image && user.image.trim() !== "" && !user.image.includes("employees/") ? (
                       <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full overflow-hidden border-2 border-[#e63946] bg-gray-100">
                         <Image
                           src={user.image}
@@ -554,7 +560,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  {user.role === "admin" ? (
+                  {(user.role === "admin" || user.role === "employee") ? (
                     <>
                       <DropdownMenuItem asChild>
                         <Link
@@ -798,8 +804,17 @@ export default function Header({ initialCategories, initialWebSettings, initialP
         </div>
       </div>
 
-      {/* Category Navigation Bar - Desktop - RED BACKGROUND with WHITE TEXT */}
-      {categories.length > 0 && (
+      {/* Pre/Live Order Counter Bar */}
+      <div className="bg-[#e63946]">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-2 sm:py-2.5">
+            <OrderCountdownBanner />
+          </div>
+        </div>
+      </div>
+
+      {/* Category Navigation Bar — HIDDEN (replaced with order counter above) */}
+      {false && categories.length > 0 && (
         <div className="hidden lg:block bg-[#e63946]">
           <div className="container mx-auto px-4">
             <div className="flex items-center gap-6 lg:gap-8 py-2 overflow-x-auto scrollbar-hide">
@@ -807,7 +822,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                 <Link
                   key={category.id}
                   href={generateCategoryUrl(category)}
-                  className="flex items-center gap-2 text-white hover:text-yellow-200 whitespace-nowrap text-sm  py-1 transition-colors"
+                  className="flex items-center gap-2 text-white hover:text-yellow-200 whitespace-nowrap text-sm py-1 transition-colors"
                 >
                   <span>{category.name}</span>
                 </Link>
@@ -870,7 +885,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                 <>
                   {/* User Profile Section */}
                   <div className="flex items-center gap-3 py-2 sm:py-3 mb-2">
-                    {user.image && user.image.trim() !== "" ? (
+                    {user.image && user.image.trim() !== "" && !user.image.includes("employees/") ? (
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-[#e63946] bg-gray-100">
                         <Image
                           src={user.image}
@@ -897,7 +912,7 @@ export default function Header({ initialCategories, initialWebSettings, initialP
                     </div>
                   </div>
 
-                  {user.role === "admin" ? (
+                  {(user.role === "admin" || user.role === "employee") ? (
                     <>
                       <Link
                         href="/dashboard"
@@ -993,8 +1008,8 @@ export default function Header({ initialCategories, initialWebSettings, initialP
               )}
             </div>
 
-            {/* Mobile Categories */}
-            {categories.length > 0 && (
+            {/* Mobile Categories — HIDDEN (commented out) */}
+            {false && categories.length > 0 && (
               <div className="p-3 sm:p-4">
                 <h3 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase mb-2 sm:mb-3">
                   Shop by Category

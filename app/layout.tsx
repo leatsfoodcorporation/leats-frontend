@@ -19,8 +19,8 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'),
-  title: "ECommerce App",
-  description: "Modern ecommerce application with authentication",
+  title: "Leats Food Corporation",
+  description: "Discover delicious food products at LEATS FOOD CORPORATION, shop online today and get the best deals.  ",
   icons: {
     // Keep only a simple fallback; runtime updater will inject the dynamic favicon.
     icon: [{ url: '/favicon.ico' }],

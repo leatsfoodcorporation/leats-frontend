@@ -1,4 +1,6 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -80,7 +82,121 @@ interface AdminData {
   updatedAt: string;
 }
 
+// Employee profile view — fetches full employee data from API
+function EmployeeProfileView({ userId }: { userId: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emp, setEmp] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    axiosInstance.get(`/api/auth/employee/me`)
+      .then(res => { if (res.data?.success) setEmp(res.data.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (!emp) return <p className="text-center text-muted-foreground py-12">Failed to load profile</p>;
+
+  return (
+    <div className="space-y-6">
+      {/* Profile Header */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={emp.profilePhotoUrl || ""} />
+              <AvatarFallback className="text-xl">{emp.name?.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-xl font-bold">{emp.name}</h2>
+              <p className="text-sm text-muted-foreground">{emp.email}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <Badge>{emp.role?.name || "No Role"}</Badge>
+                {emp.department && <Badge variant="outline">{emp.department.name}</Badge>}
+                {emp.employeeId && <span className="text-xs text-muted-foreground">{emp.employeeId}</span>}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contact & Personal Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Contact Information</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="font-medium">{emp.phone || "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium">{emp.email}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Gender</span><span className="font-medium capitalize">{emp.gender || "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span><span className="font-medium">{emp.dateOfBirth ? new Date(emp.dateOfBirth).toLocaleDateString() : "—"}</span></div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Employment Details</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Employee ID</span><span className="font-medium">{emp.employeeId || "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Role</span><span className="font-medium">{emp.role?.name || "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Department</span><span className="font-medium">{emp.department?.name || "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Joined</span><span className="font-medium">{emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString() : "—"}</span></div>
+            <Separator />
+            <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant={emp.status === "active" ? "default" : "secondary"} className="capitalize">{emp.status}</Badge></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Address */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Address</CardTitle></CardHeader>
+        <CardContent className="text-sm">
+          {emp.address || emp.city || emp.state ? (
+            <div className="space-y-1">
+              {emp.address && <p>{emp.address}</p>}
+              <p>{[emp.city, emp.state, emp.pincode].filter(Boolean).join(", ")}</p>
+              {emp.country && <p>{emp.country}</p>}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No address provided</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Documents */}
+      {(emp.aadharNumber || emp.panNumber || emp.profilePhotoUrl || emp.aadharDocumentUrl || emp.panDocumentUrl || emp.idProofDocumentUrl) && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Documents</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {(emp.aadharNumber || emp.panNumber) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {emp.aadharNumber && <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground mb-1">Aadhar Number</p><p className="font-mono font-medium text-sm">{emp.aadharNumber.replace(/(\d{4})(\d{4})(\d{4})/, "$1 $2 $3")}</p></div>}
+                {emp.panNumber && <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground mb-1">PAN Number</p><p className="font-mono font-medium text-sm">{emp.panNumber}</p></div>}
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {emp.profilePhotoUrl && <a href={emp.profilePhotoUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"><User className="w-6 h-6 text-blue-500" /><span className="text-xs">Profile Photo</span></a>}
+              {emp.aadharDocumentUrl && <a href={emp.aadharDocumentUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"><User className="w-6 h-6 text-green-500" /><span className="text-xs">Aadhar Doc</span></a>}
+              {emp.panDocumentUrl && <a href={emp.panDocumentUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"><User className="w-6 h-6 text-orange-500" /><span className="text-xs">PAN Doc</span></a>}
+              {emp.idProofDocumentUrl && <a href={emp.idProofDocumentUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"><User className="w-6 h-6 text-purple-500" /><span className="text-xs">ID Proof</span></a>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <p className="text-xs text-muted-foreground text-center">To update your profile details, please contact the administrator.</p>
+    </div>
+  );
+}
+
 export const GeneralSettings = () => {
+  const { canEdit, isFullAccess } = usePermissions();
+  const { user: authUser } = useAuth(false);
   const { user, updateUser } = useAuthContext();
   const [adminData, setAdminData] = useState<AdminData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -354,6 +470,11 @@ export const GeneralSettings = () => {
     );
   };
 
+  // Employee view — show their own profile, not admin data
+  if (authUser?.role === "employee") {
+    return <EmployeeProfileView userId={authUser.id} />;
+  }
+
   if (!adminData) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -429,7 +550,7 @@ export const GeneralSettings = () => {
                 Complete administrator information from database
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            {canEdit("settings_general") && <div className="flex items-center gap-2">
               {isEditing ? (
                 <>
                   <Button
@@ -452,7 +573,7 @@ export const GeneralSettings = () => {
                   Edit
                 </Button>
               )}
-            </div>
+            </div>}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">

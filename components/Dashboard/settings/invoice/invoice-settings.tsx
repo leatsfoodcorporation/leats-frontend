@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { format } from "date-fns";
 import axiosInstance from "@/lib/axios";
 
 export const InvoiceSettings = () => {
+  const { canEdit } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -272,6 +274,7 @@ export const InvoiceSettings = () => {
             </div>
             <Switch
               checked={settings.autoFinancialYear}
+              disabled={!canEdit("settings_invoice")}
               onCheckedChange={(checked) => handleChange("autoFinancialYear", checked)}
             />
           </div>
@@ -332,7 +335,7 @@ export const InvoiceSettings = () => {
       
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      {canEdit("settings_invoice") && <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <>
@@ -343,7 +346,7 @@ export const InvoiceSettings = () => {
             "Save Settings"
           )}
         </Button>
-      </div>
+      </div>}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function DeliveryPartner() {
   const router = useRouter();
   const pathname = usePathname();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -119,10 +121,10 @@ export default function DeliveryPartner() {
             Manage new applications and create partners manually
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/delivery-partner/new")}>
+        {canAdd("partner_applications") && <Button onClick={() => router.push("/dashboard/delivery-partner/new")}>
           <Plus className="h-4 w-4 mr-2" />
           Create Partner Manually
-        </Button>
+        </Button>}
       </div>
 
       {/* Stats Cards */}

@@ -29,14 +29,17 @@ function ResetPasswordContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [token, setToken] = useState("");
+  const [resetType, setResetType] = useState("user");
 
   useEffect(() => {
     const tokenParam = searchParams.get("token");
+    const typeParam = searchParams.get("type");
     if (!tokenParam) {
       router.push("/signin");
       return;
     }
     setToken(tokenParam);
+    setResetType(typeParam || "user");
   }, [searchParams, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,13 +91,13 @@ function ResetPasswordContent() {
     setIsLoading(true);
 
     try {
-      const response = await axiosInstance.post(
-        "/api/auth/reset-password",
-        {
-          token,
-          password: formData.password,
-        }
-      );
+      const endpoint = resetType === "employee"
+        ? "/api/auth/employee/reset-password"
+        : "/api/auth/reset-password";
+      const body = resetType === "employee"
+        ? { token, newPassword: formData.password }
+        : { token, password: formData.password };
+      const response = await axiosInstance.post(endpoint, body);
 
       const data = response.data;
 

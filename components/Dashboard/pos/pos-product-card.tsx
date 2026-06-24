@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React from "react";
 import Image from "next/image";
@@ -23,6 +24,7 @@ export const PosProductCard: React.FC<PosProductCardProps> = ({
   onDelete,
   onToggleStatus,
 }) => {
+  const { canEdit, canDelete } = usePermissions();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.id);
 
@@ -121,15 +123,19 @@ export const PosProductCard: React.FC<PosProductCardProps> = ({
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {product.isActive ? "Active" : "Inactive"}
           </span>
-          <Switch
-            checked={product.isActive}
-            onCheckedChange={(checked) => onToggleStatus(product.id, checked)}
-          />
+          {canEdit("pos_products") ? (
+            <Switch
+              checked={product.isActive}
+              onCheckedChange={(checked) => onToggleStatus(product.id, checked)}
+            />
+          ) : (
+            <span className="text-xs">{product.isActive ? "Active" : "Inactive"}</span>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          <Button
+          {canEdit("pos_products") && <Button
             variant="outline"
             size="sm"
             className="flex-1"
@@ -137,14 +143,14 @@ export const PosProductCard: React.FC<PosProductCardProps> = ({
           >
             <Pencil className="w-4 h-4 mr-1" />
             Edit
-          </Button>
-          <Button
+          </Button>}
+          {canDelete("pos_products") && <Button
             variant="destructive"
             size="sm"
             onClick={() => onDelete(product.id)}
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </Button>}
         </div>
       </div>
     </div>

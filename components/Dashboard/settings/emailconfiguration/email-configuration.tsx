@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ interface TestEmailData {
 }
 
 export const EmailConfiguration = () => {
+  const { canEdit } = usePermissions();
   const [settings, setSettings] = useState<EmailSettings>({
     smtpHost: "",
     smtpPort: "587",
@@ -256,11 +258,11 @@ export const EmailConfiguration = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
+        {canEdit("settings_email") && <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
           <Button onClick={handleSave} disabled={isLoading}>
             {isLoading ? "Saving..." : "Save Configuration"}
           </Button>
-        </div>
+        </div>}
       </div>
 
       {/* Test Email Section */}

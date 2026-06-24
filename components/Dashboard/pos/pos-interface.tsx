@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React, { useState } from "react";
 import { ProductCatalog } from "./product-catalog";
@@ -55,6 +56,8 @@ export interface Customer {
 }
 
 export const POSInterface = () => {
+  const { canAdd } = usePermissions();
+  const canBill = canAdd("pos_billing");
   const productCatalogRef = React.useRef<{ refreshProducts: () => Promise<void> }>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [currencySymbol, setCurrencySymbol] = useState<string>("₹");
@@ -515,12 +518,25 @@ export const POSInterface = () => {
             ref={productCatalogRef}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onAddToCart={addToCart}
+            onAddToCart={canBill ? addToCart : () => toast.error("You don't have permission to create POS orders")}
           />
         </div>
 
         {/* Cart Panel - Right Side */}
-        <CartPanel
+        {!canBill && cartItems.length === 0 && (
+          <div className="w-80 shrink-0 border-l bg-muted/30 flex items-center justify-center p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-700">View Only</p>
+              <p className="text-xs text-gray-500 mt-1">You don&apos;t have permission to create POS orders</p>
+            </div>
+          </div>
+        )}
+        {(canBill || cartItems.length > 0) && <CartPanel
           cartItems={cartItems}
           subtotal={subtotal}
           total={total}
@@ -538,7 +554,7 @@ export const POSInterface = () => {
           onHoldOrder={holdOrder}
           onCheckout={() => setShowCheckout(true)}
           formatCurrency={formatCurrency}
-        />
+        />}
       </div>
 
       {/* Checkout Modal */}

@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -46,6 +47,7 @@ interface Banner {
 }
 
 export default function BannerList() {
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -209,10 +211,10 @@ export default function BannerList() {
             Manage homepage banners and promotional content
           </p>
         </div>
-        <Button onClick={handleAddBanner}>
+{canAdd("web_banner") && <Button onClick={handleAddBanner}>
           <Plus className="h-4 w-4 mr-2" />
           Add Banner
-        </Button>
+        </Button>}
       </div>
 
       {/* Search */}
@@ -291,20 +293,20 @@ export default function BannerList() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
+                      {canEdit("web_banner") && <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditBanner(banner)}
                       >
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
+                      </Button>}
+                      {canDelete("web_banner") && <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteClick(banner)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -393,7 +395,7 @@ export default function BannerList() {
             <Button variant="outline" disabled={isDeleting} onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
+            {canDelete("web_banner") && <Button
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -406,7 +408,7 @@ export default function BannerList() {
               ) : (
                 "Delete"
               )}
-            </Button>
+            </Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

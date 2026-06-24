@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +71,7 @@ const POLICY_TYPES = [
 ];
 
 export const PolicyEditor = () => {
+  const { canEdit } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -281,7 +283,7 @@ export const PolicyEditor = () => {
                         : "Not yet saved"}
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  {canEdit("web_policies") && <div className="flex items-center gap-2">
                     <Button
                       variant={selectedPolicy.isPublished ? "destructive" : "default"}
                       size="sm"
@@ -300,7 +302,7 @@ export const PolicyEditor = () => {
                         </>
                       )}
                     </Button>
-                  </div>
+                  </div>}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -325,6 +327,7 @@ export const PolicyEditor = () => {
                   </div>
                   <Switch
                     checked={selectedPolicy.isActive}
+                    disabled={!canEdit("web_policies")}
                     onCheckedChange={handleToggleActive}
                   />
                 </div>
@@ -340,7 +343,7 @@ export const PolicyEditor = () => {
                 </div>
 
                 {/* Save Button */}
-                <div className="flex justify-end pt-4">
+                {canEdit("web_policies") && <div className="flex justify-end pt-4">
                   <Button onClick={handleSave} disabled={saving}>
                     {saving ? (
                       <>
@@ -354,7 +357,7 @@ export const PolicyEditor = () => {
                       </>
                     )}
                   </Button>
-                </div>
+                </div>}
               </CardContent>
             </Card>
           ) : (

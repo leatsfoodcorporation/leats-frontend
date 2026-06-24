@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ interface PurchaseDetailsProps {
 export default function PurchaseDetails({
   purchaseOrder,
 }: PurchaseDetailsProps) {
+  const { canEdit: hasEditPermission } = usePermissions();
   const router = useRouter();
   const currencySymbol = useCurrency();
   const invoiceRef = useRef<HTMLDivElement | null>(null);
@@ -121,6 +123,7 @@ export default function PurchaseDetails({
   });
 
   const canEdit =
+    hasEditPermission("purchase_orders") &&
     purchaseOrder.poStatus !== "completed" &&
     purchaseOrder.poStatus !== "cancelled";
 

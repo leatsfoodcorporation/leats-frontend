@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ interface ProductViewProps {
 }
 
 export function ProductView({ id }: ProductViewProps) {
+  const { canEdit } = usePermissions();
   const router = useRouter();
   const currencySymbol = useCurrency();
   const [product, setProduct] = useState<ProductData | null>(null);
@@ -120,14 +122,14 @@ export function ProductView({ id }: ProductViewProps) {
           >
             {product.productStatus === "active" ? "Active" : "Draft"}
           </Badge>
-          <Button
+          {canEdit("online_products") && <Button
             onClick={() =>
               router.push(`/dashboard/products-list/online/edit/${id}`)
             }
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Product
-          </Button>
+          </Button>}
         </div>
       </div>
 

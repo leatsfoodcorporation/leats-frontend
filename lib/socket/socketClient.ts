@@ -51,6 +51,12 @@ export const joinAdminRoom = (): void => {
   }
 };
 
+export const joinEmployeeRoom = (employeeId: string): void => {
+  if (socket) {
+    socket.emit('employee:join', { employeeId });
+  }
+};
+
 export const joinOrderRoom = (orderId: string): void => {
   if (socket) {
     socket.emit('order:join', { orderId });

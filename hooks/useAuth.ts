@@ -72,8 +72,31 @@ export const useAuth = (requireAuth: boolean = true) => {
 
         try {
           const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
           setIsAuthenticated(true);
+
+          // Employee: fetch fresh permissions from DB BEFORE setting loading=false
+          if (parsedUser.role === "employee") {
+            try {
+              const res = await axiosInstance.get("/api/auth/me");
+              if (res.data?.success && res.data.data) {
+                setUser({ ...parsedUser, ...res.data.data });
+              } else {
+                setUser(parsedUser);
+              }
+            } catch {
+              setUser(parsedUser); // fallback to localStorage data
+            }
+          } else if (parsedUser.role === "admin") {
+            setUser(parsedUser);
+            // Admin: refresh in background (no permission gate issues)
+            axiosInstance.get("/api/auth/me").then((res) => {
+              if (res.data?.success && res.data.data) {
+                setUser((prev: any) => prev ? { ...prev, ...res.data.data } : prev);
+              }
+            }).catch(() => {});
+          } else {
+            setUser(parsedUser);
+          }
         } catch (parseError) {
           // Silent handling - no console logs
           localStorage.removeItem("token");
@@ -105,8 +128,27 @@ export const useAuth = (requireAuth: boolean = true) => {
       }
     };
 
+    // Listen for auth-refresh (login) to re-read user from localStorage
+    const handleAuthRefresh = () => {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        try {
+          setUser(JSON.parse(userData));
+          setIsAuthenticated(true);
+        } catch { /* ignore */ }
+      }
+    };
+
+    // Listen for realtime permission updates from socket (direct to state, no localStorage)
+    const handlePermissionsUpdated = (e: Event) => {
+      const { permissions, roleName } = (e as CustomEvent).detail;
+      setUser((prev) => prev ? { ...prev, permissions, roleName } : prev);
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('auth-failure', handleAuthFailure);
+      window.addEventListener('auth-refresh', handleAuthRefresh);
+      window.addEventListener('permissions-updated', handlePermissionsUpdated);
     }
 
     checkAuth();
@@ -115,6 +157,8 @@ export const useAuth = (requireAuth: boolean = true) => {
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('auth-failure', handleAuthFailure);
+        window.removeEventListener('auth-refresh', handleAuthRefresh);
+        window.removeEventListener('permissions-updated', handlePermissionsUpdated);
       }
     };
   }, [router, requireAuth]);
@@ -182,7 +226,7 @@ export const useAuth = (requireAuth: boolean = true) => {
     setIsAuthenticated(true);
     
     // Redirect based on role
-    if (userData.role === 'admin') {
+    if (userData.role === 'admin' || userData.role === 'employee') {
       router.push("/dashboard");
     } else {
       router.push("/");
@@ -202,6 +246,10 @@ export const useAuth = (requireAuth: boolean = true) => {
     return user?.role === 'user';
   };
 
+  const isEmployee = () => {
+    return user?.role === 'employee';
+  };
+
   return {
     user: isClient ? user : null,
     isLoading,
@@ -210,6 +258,7 @@ export const useAuth = (requireAuth: boolean = true) => {
     login,
     updateUser,
     isAdmin,
-    isUser
+    isUser,
+    isEmployee,
   };
 };

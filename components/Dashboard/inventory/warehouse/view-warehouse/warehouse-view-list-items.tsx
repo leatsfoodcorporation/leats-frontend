@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -98,6 +99,7 @@ interface WarehouseViewListItemsProps {
 export default function WarehouseViewListItems({
   warehouseId,
 }: WarehouseViewListItemsProps) {
+  const { canEdit, canDelete } = usePermissions();
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -787,7 +789,7 @@ export default function WarehouseViewListItems({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <Tooltip>
+                            {canEdit("warehouse") && <Tooltip>
                               <TooltipTrigger asChild>
                                 <div>
                                   <DropdownMenuItem
@@ -824,9 +826,9 @@ export default function WarehouseViewListItems({
                                   </p>
                                 </TooltipContent>
                               )}
-                            </Tooltip>
-                            
-                            <Tooltip>
+                            </Tooltip>}
+
+                            {canDelete("warehouse") && <Tooltip>
                               <TooltipTrigger asChild>
                                 <div>
                                   <DropdownMenuItem
@@ -863,7 +865,7 @@ export default function WarehouseViewListItems({
                                   </p>
                                 </TooltipContent>
                               )}
-                            </Tooltip>
+                            </Tooltip>}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TooltipProvider>

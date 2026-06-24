@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +8,7 @@ import { OnlineOrders } from "./OnlineOrders";
 import { OfflineOrdersList } from "./offline-orders-list";
 
 export function Orders() {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("online");
@@ -39,18 +41,18 @@ export function Orders() {
         {/* Header with Tabs */}
         <div className="mb-6 flex items-center gap-5">
           <TabsList className="w-auto">
-            <TabsTrigger value="online">Online Orders</TabsTrigger>
-            <TabsTrigger value="pos">POS Orders</TabsTrigger>
+            {canView("online_orders") && <TabsTrigger value="online">Online Orders</TabsTrigger>}
+            {canView("pos_orders") && <TabsTrigger value="pos">POS Orders</TabsTrigger>}
           </TabsList>
         </div>
 
         {/* Tab Contents */}
-        <TabsContent value="online" className="mt-0 w-full">
+        {canView("online_orders") && <TabsContent value="online" className="mt-0 w-full">
           <OnlineOrders />
-        </TabsContent>
-        <TabsContent value="pos" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("pos_orders") && <TabsContent value="pos" className="mt-0 w-full">
           <OfflineOrdersList />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

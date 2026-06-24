@@ -24,6 +24,7 @@ export default function DeliveryLocationModal() {
     selectedCountry,
     setSelectedCountry,
     isLoading,
+    location,
   } = useLocation();
 
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
@@ -230,8 +231,8 @@ export default function DeliveryLocationModal() {
           </div>
         </div>
 
-        {/* Country Selector Dropdown */}
-        <div className="relative flex flex-col items-center mb-4 sm:mb-6">
+        {/* Country Selector Dropdown — HIDDEN (single country, not needed) */}
+        {false && <div className="relative flex flex-col items-center mb-4 sm:mb-6">
           <button
             onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-gray-200 hover:border-[#e63946] hover:bg-gray-50 transition-all group"
@@ -246,37 +247,7 @@ export default function DeliveryLocationModal() {
             </span>
             <ChevronDown className={`h-3 w-3 sm:h-4 sm:w-4 text-gray-400 group-hover:text-[#e63946] transition-transform ${isCountryDropdownOpen ? "rotate-180" : ""}`} />
           </button>
-
-          {/* Dropdown Menu */}
-          {isCountryDropdownOpen && (
-            <div className="absolute top-full mt-2 w-36 sm:w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1 sm:py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
-              {availableCountries.length > 0 ? (
-                availableCountries.map((country) => (
-                  <button
-                    key={country}
-                    onClick={() => {
-                      setSelectedCountry(country);
-                      setIsCountryDropdownOpen(false);
-                      setResult(null);
-                    }}
-                    className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm transition-colors hover:bg-gray-50 ${
-                      selectedCountry === country ? "text-[#e63946] font-bold bg-[#e63946]/5" : "text-gray-600 font-medium"
-                    }`}
-                  >
-                    <span className="text-base sm:text-lg">
-                      {country === "India" ? "🇮🇳" :
-                       country === "Malaysia" ? "🇲🇾" :
-                       (country === "UAE" || country === "United Arab Emirates") ? "🇦🇪" : "🌐"}
-                    </span>
-                    <span className="uppercase">{country}</span>
-                  </button>
-                ))
-              ) : (
-                <div className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs text-gray-400 italic">No zones configured</div>
-              )}
-            </div>
-          )}
-        </div>
+        </div>}
 
         {/* Result */}
         {result && (
@@ -325,6 +296,16 @@ export default function DeliveryLocationModal() {
           >
             Continue Shopping
           </button>
+        )}
+
+        {/* Currently Serving Message */}
+        {!result && location?.city && (
+          <div className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-4 sm:px-5 rounded-full bg-[#fff5f5] border border-[#e63946]/15 mb-3 sm:mb-4">
+            <span className="text-base">📍</span>
+            <span className="text-xs sm:text-sm text-gray-700 font-medium">
+              We are currently serving in <span className="font-bold text-[#e63946]">{location.city}!</span>
+            </span>
+          </div>
         )}
 
         {/* Skip text */}

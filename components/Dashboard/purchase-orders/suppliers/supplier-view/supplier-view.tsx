@@ -11,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import SupplierViewDetail from "./supplier-view-details";
 import SupplierViewListItems from "./supplier-view-list-items";
@@ -56,6 +57,7 @@ export default function SupplierView({ supplierId }: SupplierViewProps) {
   const pathname = usePathname();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { canView } = usePermissions();
   const [activeTab, setActiveTab] = useState("purchase-orders");
   const [counts, setCounts] = useState({
     purchaseOrders: 0,
@@ -255,27 +257,27 @@ export default function SupplierView({ supplierId }: SupplierViewProps) {
           className="w-full"
         >
           <TabsList className="w-full max-w-2xl grid grid-cols-3 bg-muted p-1 rounded-lg">
-            <TabsTrigger value="purchase-orders" className="gap-2">
+            {canView("purchase_orders") && <TabsTrigger value="purchase-orders" className="gap-2">
               <ShoppingCart className="size-4" />
               Purchase Orders
               <Badge variant="secondary" className="ml-1">
                 {counts.purchaseOrders}
               </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="bills" className="gap-2">
+            </TabsTrigger>}
+            {canView("bills") && <TabsTrigger value="bills" className="gap-2">
               <Receipt className="size-4" />
               Bills/GRN
               <Badge variant="secondary" className="ml-1">
                 {counts.bills}
               </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-2">
+            </TabsTrigger>}
+            {canView("expenses") && <TabsTrigger value="expenses" className="gap-2">
               <Wallet className="size-4" />
               Expenses
               <Badge variant="secondary" className="ml-1">
                 {counts.expenses}
               </Badge>
-            </TabsTrigger>
+            </TabsTrigger>}
           </TabsList>
 
           <TabsContent value="purchase-orders" className="mt-6 w-full">

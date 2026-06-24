@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useCallback } from "react";
 import { subscribeToEvent, unsubscribeFromEvent } from "@/lib/socket/socketClient";
@@ -94,6 +95,7 @@ export function OfflineOrdersList() {
   
 
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
 
   useEffect(() => {
     fetchOrders();

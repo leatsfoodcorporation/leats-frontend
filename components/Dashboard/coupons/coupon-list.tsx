@@ -1,5 +1,7 @@
 "use client";
 
+
+import { usePermissions } from "@/hooks/usePermissions";
 import { useState, useEffect } from "react";
 import axiosInstance from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -9,6 +11,17 @@ import { CouponForm } from "./coupon-form";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Coupon {
   id: string;
@@ -43,8 +56,11 @@ export function CouponList() {
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [filterActive, setFilterActive] = useState<string>("all");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [deleteCoupon, setDeleteCoupon] = useState<Coupon | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
 
   const fetchCategories = async () => {
     try {
@@ -99,16 +115,19 @@ export function CouponList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterActive, searchTerm]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this coupon?")) return;
-
+  const handleDeleteConfirm = async () => {
+    if (!deleteCoupon) return;
     try {
-      await axiosInstance.delete(`/api/online/coupons/${id}`);
+      setDeleting(true);
+      await axiosInstance.delete(`/api/online/coupons/${deleteCoupon.id}`);
       toast.success("Coupon deleted successfully");
+      setDeleteCoupon(null);
       fetchCoupons();
     } catch (error) {
       console.error("Error deleting coupon:", error);
       toast.error("Failed to delete coupon");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -135,7 +154,7 @@ export function CouponList() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Coupon Management</h1>
-        <Button onClick={() => setShowForm(true)}>Create Coupon</Button>
+{canAdd("coupons") && <Button onClick={() => setShowForm(true)}>Create Coupon</Button>}
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -254,20 +273,20 @@ export function CouponList() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
+                  {canEdit("coupons") && <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEdit(coupon)}
                   >
                     Edit
-                  </Button>
-                  <Button
+                  </Button>}
+                  {canDelete("coupons") && <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDelete(coupon.id)}
+                    onClick={() => setDeleteCoupon(coupon)}
                   >
                     Delete
-                  </Button>
+                  </Button>}
                 </div>
               </div>
             </div>
@@ -278,6 +297,28 @@ export function CouponList() {
       {showForm && (
         <CouponForm coupon={editingCoupon} onClose={handleFormClose} />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deleteCoupon} onOpenChange={(open) => !open && setDeleteCoupon(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Coupon?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the coupon <strong>&quot;{deleteCoupon?.code}&quot;</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Deleting...</> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

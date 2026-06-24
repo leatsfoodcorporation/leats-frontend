@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import {
@@ -45,6 +46,7 @@ export type { DeliveryChargeRule };
 
 export const DeliveryChargeSettings = () => {
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [rules, setRules] = useState<DeliveryChargeRule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -166,14 +168,14 @@ export const DeliveryChargeSettings = () => {
             Configure delivery charges based on order value ranges {rules.length >= 1 ? "(Currently limited to 1 rule)" : "(Multiple rules allowed)"}
           </p>
         </div>
-        <Button 
+        {canAdd("settings_charge") && <Button 
           onClick={handleOpenNew} 
           className="gap-2"
           disabled={rules.length >= 1}
         >
           <Plus className="h-4 w-4" />
           Add Rule
-        </Button>
+        </Button>}
       </div>
 
       <Separator />
@@ -197,10 +199,10 @@ export const DeliveryChargeSettings = () => {
               <p className="text-sm text-muted-foreground mb-6">
                 Create your first delivery charge rule to get started
               </p>
-              <Button onClick={handleOpenNew}>
+              {canAdd("settings_charge") && <Button onClick={handleOpenNew}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add First Rule
-              </Button>
+              </Button>}
             </div>
           ) : (
             <Table>
@@ -232,25 +234,26 @@ export const DeliveryChargeSettings = () => {
                     <TableCell>
                       <Switch
                         checked={rule.isActive}
+                        disabled={!canEdit("settings_charge")}
                         onCheckedChange={() => handleToggleActive(rule)}
                       />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
+                        {canEdit("settings_charge") && <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenEdit(rule)}
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
+                        </Button>}
+                        {canDelete("settings_charge") && <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeleteRuleId(rule.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                   </TableRow>

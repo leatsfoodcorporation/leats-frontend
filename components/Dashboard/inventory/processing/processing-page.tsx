@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ interface ProcessingPoolItem {
 }
 
 export default function Processing() {
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [activeTab, setActiveTab] = useState("pool");
   const [poolItems, setPoolItems] = useState<ProcessingPoolItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -178,14 +180,14 @@ export default function Processing() {
 
                     {/* Actions */}
                     <div className="pt-3 space-y-2">
-                      <Button
+                      {canAdd("processing") && <Button
                         className="w-full"
                         onClick={() => handleProcessClick(item)}
                         disabled={item.currentStock <= 0}
                       >
                         <ArrowRight className="h-4 w-4 mr-2" />
                         Process
-                      </Button>
+                      </Button>}
                      
                     </div>
                   </CardContent>

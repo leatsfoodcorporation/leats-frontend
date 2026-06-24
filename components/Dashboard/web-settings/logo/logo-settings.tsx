@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ interface WebSettings {
 }
 
 export default function LogoSettings() {
+  const { canEdit } = usePermissions();
   const [settings, setSettings] = useState<WebSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -173,7 +175,7 @@ export default function LogoSettings() {
             Manage your website logo and favicon
           </p>
         </div>
-        <div className="flex gap-2">
+        {canEdit("web_logo") && <div className="flex gap-2">
           {hasChanges && (
             <Button
               variant="outline"
@@ -198,7 +200,7 @@ export default function LogoSettings() {
               </>
             )}
           </Button>
-        </div>
+        </div>}
       </div>
 
       {/* Two Column Layout */}
@@ -228,14 +230,14 @@ export default function LogoSettings() {
                       className="max-h-[120px] w-auto object-contain"
                     />
                   </div>
-                  <Button
+                  {canEdit("web_logo") && <Button
                     variant="destructive"
                     size="icon"
                     className="absolute top-2 right-2"
                     onClick={handleRemoveLogo}
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </Button>}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[120px] text-center">
@@ -248,7 +250,7 @@ export default function LogoSettings() {
             </div>
 
             {/* Upload Button */}
-            <div>
+            {canEdit("web_logo") && <div>
               <input
                 type="file"
                 id="logo-upload"
@@ -264,7 +266,7 @@ export default function LogoSettings() {
                 <Upload className="mr-2 h-4 w-4" />
                 {logoPreview ? "Change Logo" : "Upload Logo"}
               </Button>
-            </div>
+            </div>}
           </CardContent>
         </Card>
 
@@ -293,14 +295,14 @@ export default function LogoSettings() {
                       className="max-h-[64px] w-auto object-contain"
                     />
                   </div>
-                  <Button
+                  {canEdit("web_logo") && <Button
                     variant="destructive"
                     size="icon"
                     className="absolute top-2 right-2"
                     onClick={handleRemoveFavicon}
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </Button>}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[120px] text-center">
@@ -313,7 +315,7 @@ export default function LogoSettings() {
             </div>
 
             {/* Upload Button */}
-            <div>
+            {canEdit("web_logo") && <div>
               <input
                 type="file"
                 id="favicon-upload"
@@ -329,7 +331,7 @@ export default function LogoSettings() {
                 <Upload className="mr-2 h-4 w-4" />
                 {faviconPreview ? "Change Favicon" : "Upload Favicon"}
               </Button>
-            </div>
+            </div>}
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,7 @@ import  FAQ  from "./faq/faq";
 import { useEffect, useState } from "react";
 
 export const WebSettings = () => {
+  const { canView } = usePermissions();
   const router = useRouter();
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("logo");
@@ -43,34 +45,34 @@ export const WebSettings = () => {
         {/* Header with Tabs */}
         <div className="mb-6 flex items-center gap-5">
           <TabsList className="w-auto">
-            <TabsTrigger value="logo">Logo</TabsTrigger>
-            <TabsTrigger value="banner">Banner</TabsTrigger>
-            <TabsTrigger value="company">Company</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="policies">Policies</TabsTrigger>
-            <TabsTrigger value="faq">FAQ</TabsTrigger>
+            {canView("web_logo") && <TabsTrigger value="logo">Logo</TabsTrigger>}
+            {canView("web_banner") && <TabsTrigger value="banner">Banner</TabsTrigger>}
+            {canView("web_company") && <TabsTrigger value="company">Company</TabsTrigger>}
+            {canView("web_seo") && <TabsTrigger value="seo">SEO</TabsTrigger>}
+            {canView("web_policies") && <TabsTrigger value="policies">Policies</TabsTrigger>}
+            {canView("web_policies") && <TabsTrigger value="faq">FAQ</TabsTrigger>}
           </TabsList>
         </div>
 
         {/* Tab Contents */}
-        <TabsContent value="logo" className="mt-0 w-full">
+        {canView("web_logo") && <TabsContent value="logo" className="mt-0 w-full">
           <LogoSettings />
-        </TabsContent>
-        <TabsContent value="banner" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("web_banner") && <TabsContent value="banner" className="mt-0 w-full">
           <BannerList />
-        </TabsContent>
-        <TabsContent value="company" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("web_company") && <TabsContent value="company" className="mt-0 w-full">
           <CompanySettings />
-        </TabsContent>
-        <TabsContent value="seo" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("web_seo") && <TabsContent value="seo" className="mt-0 w-full">
           <PageSEOList />
-        </TabsContent>
-        <TabsContent value="policies" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("web_policies") && <TabsContent value="policies" className="mt-0 w-full">
           <PolicyEditor />
-        </TabsContent>
-        <TabsContent value="faq" className="mt-0 w-full">
+        </TabsContent>}
+        {canView("web_policies") && <TabsContent value="faq" className="mt-0 w-full">
           <FAQ />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

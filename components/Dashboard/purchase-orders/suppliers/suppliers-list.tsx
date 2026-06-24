@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -66,6 +67,7 @@ type Supplier = {
 export default function SuppliersList() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -310,7 +312,7 @@ export default function SuppliersList() {
             className="pl-9"
           />
         </div>
-        <Button
+        {canAdd("suppliers") && <Button
           onClick={() => {
             setEditingSupplier(null);
             setIsAddDialogOpen(true);
@@ -319,7 +321,7 @@ export default function SuppliersList() {
         >
           <Plus className="size-4" />
           Add Supplier
-        </Button>
+        </Button>}
       </div>
 
       {/* Supplier Table */}
@@ -381,15 +383,15 @@ export default function SuppliersList() {
                       >
                         <Eye className="size-4" />
                       </Button>
-                      <Button
+                      {canEdit("suppliers") && <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleEdit(supplier)}
                         title="Edit supplier"
                       >
                         <Edit className="size-4" />
-                      </Button>
-                      <Button
+                      </Button>}
+                      {canEdit("suppliers") && <Button
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => handleStatusToggle(supplier)}
@@ -406,7 +408,7 @@ export default function SuppliersList() {
                               : "text-green-600"
                           }`}
                         />
-                      </Button>
+                      </Button>}
                     </div>
                   </TableCell>
                 </TableRow>

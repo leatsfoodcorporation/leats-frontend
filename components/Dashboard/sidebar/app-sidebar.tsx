@@ -24,6 +24,9 @@ import {
   Globe,
   Store,
   MessageSquare,
+  Search,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 import { GiCash } from "react-icons/gi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,6 +56,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LogoutAlert } from "@/components/ui/logout-alert";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { TbReceipt, TbTruckDelivery } from "react-icons/tb";
 import {
   getWebSettings,
@@ -71,9 +75,11 @@ type NavItem = {
   url: string;
   icon?: React.ComponentType;
   isActive?: boolean;
+  permissionModule?: string; // Maps to permission key for filtering
   items?: {
     title: string;
     url: string;
+    permissionModule?: string; // Sub-item permission
   }[];
 };
 
@@ -84,16 +90,19 @@ const navMain: NavItem[] = [
     url: "/dashboard",
     icon: Home,
     isActive: true,
+    permissionModule: "dashboard",
   },
   {
     title: "Online Products",
     url: "/dashboard/products-list",
     icon: ShoppingBag,
+    permissionModule: "online_products",
   },
   {
     title: "Coupons",
     url: "/dashboard/coupons",
     icon: Ticket,
+    permissionModule: "coupons",
   },
   {
     title: "Inventory",
@@ -101,18 +110,9 @@ const navMain: NavItem[] = [
     icon: Package,
     isActive: true,
     items: [
-      {
-        title: "Warehouse",
-        url: "/dashboard/inventory-management/warehouse",
-      },
-      {
-        title: "Stock Adjustment",
-        url: "/dashboard/inventory-management/stock-adjustment",
-      },
-      {
-        title: "Reports",
-        url: "/dashboard/inventory-management/reports",
-      },
+      { title: "Warehouse", url: "/dashboard/inventory-management/warehouse", permissionModule: "warehouse" },
+      { title: "Stock Adjustment", url: "/dashboard/inventory-management/stock-adjustment", permissionModule: "stock_adjustment" },
+      { title: "Reports", url: "/dashboard/inventory-management/reports", permissionModule: "inventory_reports" },
     ],
   },
   // {
@@ -145,10 +145,7 @@ const navMain: NavItem[] = [
     icon: TbReceipt,
     isActive: true,
     items: [
-      {
-        title: "Products",
-        url: "/dashboard/pos/products",
-      },
+      { title: "Products", url: "/dashboard/pos/products", permissionModule: "pos_products" },
     ],
   },
   {
@@ -156,6 +153,7 @@ const navMain: NavItem[] = [
     url: "/dashboard/customer-management",
     icon: Users,
     isActive: true,
+    permissionModule: "customers",
   },
 
   {
@@ -164,14 +162,8 @@ const navMain: NavItem[] = [
     icon: ShoppingCart,
     isActive: true,
     items: [
-      {
-        title: "Online Orders",
-        url: "/dashboard/orders/online",
-      },
-      {
-        title: "Pos Orders",
-        url: "/dashboard/orders/pos",
-      },
+      { title: "Online Orders", url: "/dashboard/orders/online", permissionModule: "online_orders" },
+      { title: "Pos Orders", url: "/dashboard/orders/pos", permissionModule: "pos_orders" },
     ],
   },
   {
@@ -180,18 +172,9 @@ const navMain: NavItem[] = [
     icon: DollarSign,
     isActive: true,
     items: [
-      {
-        title: "Sales",
-        url: "/dashboard/finances/sales",
-      },
-      {
-        title: "Transactions",
-        url: "/dashboard/finances/transactions",
-      },
-      {
-        title: "Purchase",
-        url: "/dashboard/purchase-orders",
-      },
+      { title: "Sales", url: "/dashboard/finances/sales", permissionModule: "online_sales" },
+      { title: "Transactions", url: "/dashboard/finances/transactions", permissionModule: "transactions" },
+      { title: "Purchase", url: "/dashboard/purchase-orders", permissionModule: "suppliers" },
     ],
   },
   {
@@ -200,14 +183,8 @@ const navMain: NavItem[] = [
     icon: Truck,
     isActive: true,
     items: [
-      {
-        title: "New Application",
-        url: "/dashboard/delivery-partner/all",
-      },
-      {
-        title: "Manage Profile",
-        url: "/dashboard/delivery-partner/manage",
-      },
+      { title: "New Application", url: "/dashboard/delivery-partner/all", permissionModule: "partner_applications" },
+      { title: "Manage Profile", url: "/dashboard/delivery-partner/manage", permissionModule: "partner_management" },
       // {
       //   title: "Reports",
       //   url: "/dashboard/delivery-partner/reports",
@@ -220,14 +197,20 @@ const navMain: NavItem[] = [
     icon: MessageSquare,
     isActive: true,
     items: [
-      {
-        title: "Bulk Orders",
-        url: "/dashboard/enquiries/bulk-orders",
-      },
-      {
-        title: "Catering Services",
-        url: "/dashboard/enquiries/catering-services",
-      },
+      { title: "Bulk Orders", url: "/dashboard/enquiries/bulk-orders", permissionModule: "bulk_enquiries" },
+      { title: "Catering Services", url: "/dashboard/enquiries/catering-services", permissionModule: "catering_enquiries" },
+    ],
+  },
+  {
+    title: "Employees",
+    url: "/dashboard/employees",
+    icon: Users,
+    isActive: true,
+    permissionModule: "employees",
+    items: [
+      { title: "All Employees", url: "/dashboard/employees/all", permissionModule: "employees" },
+      { title: "Roles", url: "/dashboard/employees/roles", permissionModule: "roles" },
+      { title: "Departments", url: "/dashboard/employees/departments", permissionModule: "departments" },
     ],
   },
 ];
@@ -235,6 +218,28 @@ const navMain: NavItem[] = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { user, logout } = useAuth(false);
+  const { canView, isFullAccess } = usePermissions();
+
+  // Filter nav items based on permissions (admin sees all, employee sees permitted)
+  const isAdmin = user?.role === "admin";
+  const filteredNavMain = isAdmin
+    ? navMain
+    : navMain
+        .map((item) => {
+          // If item has sub-items, filter those first
+          if (item.items) {
+            const filteredItems = item.items.filter(
+              (sub) => !sub.permissionModule || canView(sub.permissionModule)
+            );
+            // Hide parent if no sub-items are visible
+            if (filteredItems.length === 0) return null;
+            return { ...item, items: filteredItems };
+          }
+          // Top-level item — check its own permission
+          if (item.permissionModule && !canView(item.permissionModule)) return null;
+          return item;
+        })
+        .filter(Boolean) as NavItem[];
   const [showLogoutAlert, setShowLogoutAlert] = React.useState(false);
   const [logoutTimeoutId, setLogoutTimeoutId] =
     React.useState<NodeJS.Timeout | null>(null);
@@ -348,7 +353,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
-            {navMain.map((item) => {
+            {filteredNavMain.map((item) => {
               // If item has submenu items
               if (item.items && item.items.length > 0) {
                 return (
@@ -426,8 +431,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter>
         <SidebarMenu>
-          {/* Web Settings Dropdown */}
-          <SidebarMenuItem>
+          {/* Web Settings Dropdown — hidden for employees without permission */}
+          {(isAdmin || canView("web_logo") || canView("web_banner") || canView("web_company") || canView("web_seo") || canView("web_policies")) && <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
@@ -448,31 +453,49 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuLabel>Web Settings</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  {(isAdmin || canView("web_logo")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/web-settings/logo">
                       <Globe className="mr-2 h-4 w-4" />
                       <span>Logo</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("web_banner")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/web-settings/banner">
                       <Package className="mr-2 h-4 w-4" />
                       <span>Banner</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("web_company")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/web-settings/company">
                       <Users className="mr-2 h-4 w-4" />
                       <span>Company</span>
                     </Link>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("web_seo")) && <DropdownMenuItem className="cursor-pointer" asChild>
+                    <Link href="/dashboard/web-settings/seo">
+                      <Search className="mr-2 h-4 w-4" />
+                      <span>SEO</span>
+                    </Link>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("web_policies")) && <DropdownMenuItem className="cursor-pointer" asChild>
+                    <Link href="/dashboard/web-settings/policies">
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Policies</span>
+                    </Link>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("web_policies")) && <DropdownMenuItem className="cursor-pointer" asChild>
+                    <Link href="/dashboard/web-settings/faq">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>FAQ</span>
+                    </Link>
+                  </DropdownMenuItem>}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </SidebarMenuItem>
+          </SidebarMenuItem>}
 
-          {/* Settings Dropdown */}
-          <SidebarMenuItem>
+          {/* Settings Dropdown — hidden for employees without permission */}
+          {(isAdmin || canView("settings_general") || canView("settings_gst") || canView("settings_zones") || canView("settings_charge")) && <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
@@ -493,53 +516,52 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuLabel>Settings</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  {(isAdmin || canView("settings_general")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>General</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_email")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/email-configuration">
                       <Mail className="mr-2 h-4 w-4" />
                       <span>Email Configuration</span>
                     </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_payment")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/payment-gateway">
                       <CreditCard className="mr-2 h-4 w-4" />
                       <span>Payment gateways</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_invoice")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/invoice">
                       <Receipt className="mr-2 h-4 w-4" />
                       <span>Invoice</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_gst")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/gst">
                       <TrendingUp className="mr-2 h-4 w-4" />
                       <span>Gst / Tax</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_zones")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/delivery-zones">
                       <TbTruckDelivery className="mr-2 h-4 w-4" />
                       <span>Delivery Zone</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer" asChild>
+                  </DropdownMenuItem>}
+                  {(isAdmin || canView("settings_charge")) && <DropdownMenuItem className="cursor-pointer" asChild>
                     <Link href="/dashboard/settings/delivery-charge">
                       <GiCash className="mr-2 h-4 w-4" />
                       <span>Delivery Charge</span>
                     </Link>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem>}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </SidebarMenuItem>
+          </SidebarMenuItem>}
 
           {/* User Profile Dropdown */}
           <SidebarMenuItem>

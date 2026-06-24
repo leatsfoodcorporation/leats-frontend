@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 import React, { useState, useEffect } from "react";
 import FAQForm from "./faq-form";
 import * as faqService from "@/services/web/faqService";
@@ -28,6 +29,7 @@ type ContentItem = { title: string; description: string };
 type FAQItem = { id: string; title: string; contents: ContentItem[]; isActive?: boolean; sortOrder?: number | null };
 
 export default function FAQ() {
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewFaq, setViewFaq] = useState<FAQItem | null>(null);
@@ -151,7 +153,7 @@ export default function FAQ() {
           <p className="text-muted-foreground mt-1 text-sm">Manage frequently asked questions shown on the site.</p>
         </div>
 
-        <FAQForm onSave={handleSave} />
+        {canAdd("web_policies") && <FAQForm onSave={handleSave} />}
       </div>
 
       <hr className="opacity-50" />
@@ -203,7 +205,7 @@ export default function FAQ() {
                   <Eye className="h-4 w-4 mr-1" />
                   View
                 </Button>
-                <Button
+                {canEdit("web_policies") && <Button
                   variant="outline"
                   size="sm"
                   className="flex-1"
@@ -211,14 +213,14 @@ export default function FAQ() {
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
-                </Button>
-                <Button
+                </Button>}
+                {canDelete("web_policies") && <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setDeleteId(faq.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                </Button>}
               </CardFooter>
             </Card>
           ))}

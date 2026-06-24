@@ -1,4 +1,5 @@
 "use client"
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ interface ComboProduct {
 export default function ComboProductlist() {
   const router = useRouter();
   const currencySymbol = useCurrency();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -256,14 +258,14 @@ export default function ComboProductlist() {
             </Button>
           )}
 
-          <Button
+          {canAdd("online_products") && <Button
             onClick={handleAddComboProduct}
             className="w-full sm:w-auto text-sm"
             size="sm"
           >
             <Plus className="size-4 mr-1" />
             Add Combo Product
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -423,22 +425,22 @@ export default function ComboProductlist() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         
-                        <Button
+                        {canEdit("online_products") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleEdit(combo.id)}
                           title="Edit"
                         >
                           <Edit className="size-4" />
-                        </Button>
-                        <Button
+                        </Button>}
+                        {canDelete("online_products") && <Button
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => handleDelete(combo)}
                           title="Delete"
                         >
                           <Trash2 className="size-4 text-destructive" />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -528,21 +530,21 @@ export default function ComboProductlist() {
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t">
                   
-                  <Button
+                  {canEdit("online_products") && <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEdit(combo.id)}
                   >
                     <Edit className="size-3 mr-1" />
                     Edit
-                  </Button>
-                  <Button
+                  </Button>}
+                  {canDelete("online_products") && <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(combo)}
                   >
                     <Trash2 className="size-3 text-destructive" />
-                  </Button>
+                  </Button>}
                 </div>
               </div>
             );

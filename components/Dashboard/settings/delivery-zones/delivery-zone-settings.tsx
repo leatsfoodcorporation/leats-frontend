@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -63,6 +64,7 @@ import { Sparkles } from "lucide-react";
 const DeliveryZoneSettings = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { canAdd, canEdit, canDelete } = usePermissions();
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -453,12 +455,12 @@ const DeliveryZoneSettings = () => {
           setIsDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <DialogTrigger asChild>
+          {canAdd("settings_zones") && <DialogTrigger asChild>
             <Button onClick={openNewDialog} className="gap-2 bg-primary hover:bg-primary/90 shadow-md">
               <Plus className="h-4 w-4" />
               Add Zone
             </Button>
-          </DialogTrigger>
+          </DialogTrigger>}
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>
@@ -501,6 +503,7 @@ const DeliveryZoneSettings = () => {
                 </div>
                 <Switch
                   checked={formData.isAllPincodes}
+                  disabled={!canEdit("settings_zones")}
                   onCheckedChange={(checked) => {
                     setFormData(prev => ({ ...prev, isAllPincodes: checked }));
                     if (checked) {
@@ -673,7 +676,7 @@ const DeliveryZoneSettings = () => {
             <p className="text-muted-foreground text-sm max-w-[300px] text-center mt-2 mb-8">
               Configure your service areas to manage delivery availability and pincodes.
             </p>
-            <Button onClick={openNewDialog} className="px-8 rounded-full">Add First Location</Button>
+            {canAdd("settings_zones") && <Button onClick={openNewDialog} className="px-8 rounded-full">Add First Location</Button>}
           </CardContent>
         </Card>
       ) : !selectedState ? (
@@ -760,6 +763,7 @@ const DeliveryZoneSettings = () => {
                     </div>
                     <Switch
                       checked={zone.isActive}
+                      disabled={!canEdit("settings_zones")}
                       onCheckedChange={() => handleToggleActive(zone)}
                       className="data-[state=checked]:bg-green-500"
                     />
@@ -799,12 +803,12 @@ const DeliveryZoneSettings = () => {
                       Edited {new Date(zone.updatedAt).toLocaleDateString()}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button variant="secondary" size="sm" onClick={() => openEditDialog(zone)} className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform">
+                      {canEdit("settings_zones") && <Button variant="secondary" size="sm" onClick={() => openEditDialog(zone)} className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform">
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteZoneId(zone.id)} className="h-8 w-8 p-0 rounded-full text-destructive hover:bg-destructive/10 hover:scale-110 transition-transform">
+                      </Button>}
+                      {canDelete("settings_zones") && <Button variant="ghost" size="sm" onClick={() => setDeleteZoneId(zone.id)} className="h-8 w-8 p-0 rounded-full text-destructive hover:bg-destructive/10 hover:scale-110 transition-transform">
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </Button>}
                     </div>
                   </div>
                 </div>

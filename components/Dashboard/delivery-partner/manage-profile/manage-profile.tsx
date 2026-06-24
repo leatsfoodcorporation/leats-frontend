@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -53,6 +54,7 @@ interface PartnerWithOrders extends DeliveryPartner {
 }
 
 export default function ManageProfile({ partnerId }: ManageProfileProps) {
+  const { canEdit } = usePermissions();
   const router = useRouter();
   const currencySymbol = useCurrency();
   const [partner, setPartner] = useState<PartnerWithOrders | null>(null);
@@ -145,13 +147,13 @@ export default function ManageProfile({ partnerId }: ManageProfileProps) {
             View partner information and completed orders
           </p>
         </div>
-        <Button
+        {canEdit("partner_management") && <Button
           onClick={() =>
             router.push(`/dashboard/delivery-partner/edit/${partnerId}`)
           }
         >
           Edit Profile
-        </Button>
+        </Button>}
       </div>
 
       {/* Profile Header Card */}

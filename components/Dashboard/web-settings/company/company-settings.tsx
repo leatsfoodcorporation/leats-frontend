@@ -1,4 +1,5 @@
 "use client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ interface CompanyInfo {
 }
 
 export const CompanySettings = () => {
+  const { canEdit } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
@@ -347,7 +349,7 @@ export const CompanySettings = () => {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      {canEdit("web_company") && <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <>
@@ -358,7 +360,7 @@ export const CompanySettings = () => {
             "Save Company Information"
           )}
         </Button>
-      </div>
+      </div>}
     </div>
   );
 };
